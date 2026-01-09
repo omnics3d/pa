@@ -1,10 +1,10 @@
-import sys
 import os
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout
-from PySide6.QtGui import QPainter, QColor, QPen
+from PySide6.QtGui import QPainter, QColor, QPen, QBrush
+from PySide6.QtCore import Qt
 from core.logger_v2026 import get_logger
 from utils.menu_manager import MenuManager
-from core.data_loader import DataLoader # Новый импорт
+from core.data_loader import DataLoader
 
 try:
     from core.exchange_manager import ExchangeDataManager
@@ -14,78 +14,84 @@ except ImportError:
 class CandlestickChart(QWidget):
     def __init__(self, data, title="Chart"):
         super().__init__()
-        self.data = data # Теперь это список агрегированных свечей
+        self.data = data
         self.title = title
 
     def paintEvent(self, event):
         painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
         painter.fillRect(self.rect(), QColor("#121212"))
+        
+        if not self.data:
+            painter.setPen(QColor("#FFFFFF"))
+            painter.drawText(self.rect(), Qt.AlignCenter, "No Data")
+            return
+
+        # Масштабирование
+        max_p = max(c['h'] for c in self.data)
+        min_p = min(c['l'] for c in self.data)
+        diff = max_p - min_p if max_p != min_p else 1
+        
+        h = self.height() - 60
+        w = self.width() - 20
+        c_width = max(1, w // len(self.data) - 1)
+
+        for i, c in enumerate(self.data):
+            x = i * (c_width + 1) + 10
+            # Рассчет Y координат
+            y_o = h - ((c['o'] - min_p) / diff) * h + 30
+            y_c = h - ((c['c'] - min_p) / diff) * h + 30
+            y_h = h - ((c['h'] - min_p) / diff) * h + 30
+            y_l = h - ((c['l'] - min_p) / diff) * h + 30
+
+            color = QColor("#00FF00") if c['c'] >= c['o'] else QColor("#FF0000")
+            painter.setPen(QPen(color, 1))
+            painter.setBrush(QBrush(color))
+            
+            # Фитиль и тело
+            painter.drawLine(x + c_width//2, y_h, x + c_width//2, y_l)
+            painter.drawRect(x, min(y_o, y_c), c_width, max(1, abs(y_o - y_c)))
+
         painter.setPen(QColor("#FFFFFF"))
-        
-        info_text = f"{self.title} | Candles: {len(self.data)}"
-        painter.drawText(20, 20, info_text)
-        
-        # Если есть данные, рисуем тестовую линию по ценам закрытия
-        if self.data:
-            painter.setPen(QPen(QColor("#00FF00"), 2))
-            painter.drawLine(0, self.height()//2, self.width(), self.height()//2)
+        painter.drawText(20, 20, f"{self.title} | {len(self.data)} candles")
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.log = get_logger("GUI_2026")
         self.setWindowTitle("Termux FinChart 2026")
-        self.resize(800, 600)
+        self.resize(1000, 700)
         
-        self.manager = None
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         xml_path = os.path.join(base_dir, "storage", "state", "exchanges_config.xml")
         
-        if ExchangeDataManager and os.path.exists(xml_path):
-            try:
-                self.manager = ExchangeDataManager(xml_path)
-                self.log.info(f"Config loaded: {xml_path}")
-            except Exception as e:
-                self.log.error(f"XML Error: {e}")
-
+        self.manager = ExchangeDataManager(xml_path) if ExchangeDataManager and os.path.exists(xml_path) else None
+        
         self.central = QWidget()
         self.setCentralWidget(self.central)
         self.layout = QVBoxLayout(self.central)
-
         self.menu_controller = MenuManager(self)
         self.menu_controller.setup_ui()
 
     def show_default_chart(self):
         self.clear_layout()
-        chart = CandlestickChart(data=[], title="No Data Loaded")
-        self.layout.addWidget(chart)
+        self.layout.addWidget(CandlestickChart([], "Welcome"))
 
     def on_tool_selected(self, e, m, t):
-        """Выбор инструмента с автоматической загрузкой и агрегацией ТФ."""
-        if not self.manager: return
-            
         path = self.manager.get_tool_data_path(e, m, t)
-        start_date = self.manager.get_start_date_for_tool(e, m, t)
-        end_date = self.manager.get_end_date_for_tool(e, m, t)
+        s_date = self.manager.get_start_date_for_tool(e, m, t)
+        e_date = self.manager.get_end_date_for_tool(e, m, t)
         
-        if all([path, start_date, end_date]):
-            self.log.info(f"Selected: {t} | DATA PATH: {path}")
-            
-            # Инициализируем загрузчик
+        if all([path, s_date, e_date]):
+            self.log.info(f"Loading {t} | Path: {path}")
             loader = DataLoader(path, t)
-            # Пример: собираем 15-минутные свечи (timeframe_min=15)
-            # Сюда можно передать и 10032 для экстремальных ТФ
-            candles = loader.get_candles(start_date, end_date, timeframe_min=15)
-            
+            # Загружаем 15-минутные свечи для примера
+            candles = loader.get_candles(s_date, e_date, timeframe_min=15)
             self.clear_layout()
-            chart = CandlestickChart(data=candles, title=f"Chart: {e}:{t} (15m)")
-            self.layout.addWidget(chart)
-        else:
-            self.log.error(f"Incomplete data in XML for tool: {t}")
+            self.layout.addWidget(CandlestickChart(candles, f"{t} (15m)"))
 
     def clear_layout(self):
         while self.layout.count():
             item = self.layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
+            if item.widget(): item.widget().deleteLater()
 

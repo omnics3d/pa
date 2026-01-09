@@ -103,8 +103,7 @@ class ExchangeDataManager:
 
     def get_tool_data_path(self, exchange_name: str, market_name: str, tool_name: str) -> Optional[str]:
         tool = self._find_tool_model(exchange_name, market_name, tool_name)
-        if not tool: return None
-        return f"data/{exchange_name}/{market_name}/{tool.name}"
+        return f"data/{exchange_name}/{market_name}/{tool.name}" if tool else None
 
     def get_start_date_for_tool(self, exchange_name: str, market_name: str, tool_name: str) -> Optional[str]:
         tool = self._find_tool_model(exchange_name, market_name, tool_name)
@@ -123,32 +122,4 @@ class ExchangeDataManager:
                             if t.name.upper() == tool_name.upper():
                                 return t
         return None
-
-    def update_end_load_date(self, exchange_name: str, market_name: str, tool_name: str, new_date: str) -> bool:
-        updated = False
-        for exch in self.root.findall('exchange'):
-            ex_n = exch.find('parameters/full_name')
-            if (ex_n is not None and ex_n.text.lower() == exchange_name.lower()):
-                for mkt in exch.findall('markets/market'):
-                    mk_n = mkt.find('parameters/full_name')
-                    if (mk_n is not None and mk_n.text.lower() == market_name.lower()):
-                        for tool in mkt.findall('tools/tool'):
-                            tl_n = tool.find('name')
-                            if (tl_n is not None and tl_n.text.upper() == tool_name.upper()):
-                                end_ld = tool.find('load_date/end_load')
-                                if end_ld is not None:
-                                    end_ld.text = new_date
-                                    updated = True
-        if updated:
-            self._refresh_model()
-        return updated
-
-    def save_changes(self, output_path: Optional[str] = None) -> None:
-        path = output_path if output_path else self.file_path
-        self.tree.write(path, encoding='utf-8', xml_declaration=True)
-
-    def get_full_xml_string(self) -> str:
-        raw_xml = ET.tostring(self.root, encoding='utf-8')
-        parsed = minidom.parseString(raw_xml)
-        return parsed.toprettyxml(indent="  ")
 
