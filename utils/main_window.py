@@ -5,7 +5,7 @@ from PySide6.QtGui import QPainter, QColor, QPen, QAction
 from PySide6.QtCore import Qt
 from core.logger_v2026 import get_logger
 
-# Импорт менеджера
+# Импорт менеджера данных
 try:
     from core.exchange_manager import ExchangeDataManager
 except ImportError:
@@ -57,11 +57,21 @@ class MainWindow(QMainWindow):
     def init_menu(self):
         bar = self.menuBar()
         
-        # 1. Кнопка Graph
+        # 1. Меню Options
+        options_menu = bar.addMenu("Options")
+        exit_act = QAction("Exit", self)
+        exit_act.setShortcut("Ctrl+Q")
+        exit_act.triggered.connect(self.close)
+        options_menu.addAction(exit_act)
+        
+        # 2. Кнопка Graph
         graph_act = bar.addAction("Graph")
         graph_act.triggered.connect(self.show_default_chart)
+
+        # 3. Меню Settings
+        self.settings_menu = bar.addMenu("Settings")
         
-        # 2. Динамическое меню выбора (Select)
+        # 4. Динамическое меню выбора (Select)
         if self.manager:
             self.select_menu = bar.addMenu("Select")
             self.build_dynamic_menu(self.select_menu)
@@ -77,21 +87,22 @@ class MainWindow(QMainWindow):
                     tools = self.manager.get_tools_for_market(ex, mk) or []
                     for tl in tools:
                         act = QAction(tl, self)
-                        # Используем lambda с дефолтными значениями для фиксации итератора
-                        act.triggered.connect(lambda chk=False, e=ex, m=mk, t=tl: self.on_tool_selected(e,m,t))
+                        act.triggered.connect(
+                            lambda chk=False, e=ex, m=mk, t=tl: self.on_tool_selected(e, m, t)
+                        )
                         mk_m.addAction(act)
         except Exception as e:
             self.log.error(f"Ошибка построения меню: {e}")
 
     def show_default_chart(self):
         self.clear_layout()
-        chart = CandlestickChart([(10,20,5,15)], "Default Chart")
+        chart = CandlestickChart([(10, 20, 5, 15)], "Default Chart")
         self.layout.addWidget(chart)
 
     def on_tool_selected(self, e, m, t):
         self.log.info(f"Выбран инструмент: {e} -> {m} -> {t}")
         self.clear_layout()
-        chart = CandlestickChart([(10,20,5,15)], f"Chart: {e} | {t}")
+        chart = CandlestickChart([(10, 20, 5, 15)], f"Chart: {e} | {t}")
         self.layout.addWidget(chart)
 
     def clear_layout(self):
