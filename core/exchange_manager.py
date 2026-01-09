@@ -102,14 +102,17 @@ class ExchangeDataManager:
         return None
 
     def get_tool_data_path(self, exchange_name: str, market_name: str, tool_name: str) -> Optional[str]:
-        """
-        Формирует иерархический путь к данным: data/exchange/market/tool
-        """
         tool = self._find_tool_model(exchange_name, market_name, tool_name)
-        if not tool:
-            return None
-        # Собираем путь на основе структуры папок
+        if not tool: return None
         return f"data/{exchange_name}/{market_name}/{tool.name}"
+
+    def get_start_date_for_tool(self, exchange_name: str, market_name: str, tool_name: str) -> Optional[str]:
+        tool = self._find_tool_model(exchange_name, market_name, tool_name)
+        return tool.load_date.start_load if tool else None
+
+    def get_end_date_for_tool(self, exchange_name: str, market_name: str, tool_name: str) -> Optional[str]:
+        tool = self._find_tool_model(exchange_name, market_name, tool_name)
+        return tool.load_date.end_load if tool else None
 
     def _find_tool_model(self, exchange_name: str, market_name: str, tool_name: str) -> Optional[Tool]:
         for ex in self.exchanges:
