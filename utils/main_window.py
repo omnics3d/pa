@@ -1,11 +1,10 @@
 import sys
 import os
-from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QMenu
-from PySide6.QtGui import QPainter, QColor, QPen, QAction
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout
+from PySide6.QtGui import QPainter, QColor, QPen
 from core.logger_v2026 import get_logger
+from utils.menu_manager import MenuManager # Новый импорт
 
-# Импорт менеджера данных
 try:
     from core.exchange_manager import ExchangeDataManager
 except ImportError:
@@ -23,7 +22,6 @@ class CandlestickChart(QWidget):
         painter.fillRect(self.rect(), QColor("#121212"))
         painter.setPen(QColor("#FFFFFF"))
         painter.drawText(20, 20, self.title)
-        # Тестовая отрисовка линии тренда
         painter.setPen(QPen(QColor("#00FF00"), 2))
         painter.drawLine(0, self.height()//2, self.width(), self.height()//2)
 
@@ -34,65 +32,24 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Termux FinChart 2026")
         self.resize(800, 600)
         
-        # Настройка пути к XML (storage/state/exchanges_config.xml)
+        # Загрузка менеджера данных
         self.manager = None
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         xml_path = os.path.join(base_dir, "storage", "state", "exchanges_config.xml")
         
-        if ExchangeDataManager:
-            if os.path.exists(xml_path):
-                try:
-                    self.manager = ExchangeDataManager(xml_path)
-                    self.log.info(f"Конфигурация загружена из: {xml_path}")
-                except Exception as e:
-                    self.log.error(f"Ошибка загрузки XML: {e}")
-            else:
-                self.log.warning(f"Файл конфигурации не найден: {xml_path}")
+        if ExchangeDataManager and os.path.exists(xml_path):
+            try:
+                self.manager = ExchangeDataManager(xml_path)
+            except Exception as e:
+                self.log.error(f"XML Error: {e}")
 
         self.central = QWidget()
         self.setCentralWidget(self.central)
         self.layout = QVBoxLayout(self.central)
-        self.init_menu()
 
-    def init_menu(self):
-        bar = self.menuBar()
-        
-        # 1. Меню Options
-        options_menu = bar.addMenu("Options")
-        exit_act = QAction("Exit", self)
-        exit_act.setShortcut("Ctrl+Q")
-        exit_act.triggered.connect(self.close)
-        options_menu.addAction(exit_act)
-        
-        # 2. Кнопка Graph
-        graph_act = bar.addAction("Graph")
-        graph_act.triggered.connect(self.show_default_chart)
-
-        # 3. Меню Settings
-        self.settings_menu = bar.addMenu("Settings")
-        
-        # 4. Динамическое меню выбора (Select)
-        if self.manager:
-            self.select_menu = bar.addMenu("Select")
-            self.build_dynamic_menu(self.select_menu)
-
-    def build_dynamic_menu(self, menu):
-        try:
-            exchanges = self.manager.get_exchange_names()
-            for ex in exchanges:
-                ex_m = menu.addMenu(ex)
-                markets = self.manager.get_markets_for_exchange(ex) or []
-                for mk in markets:
-                    mk_m = ex_m.addMenu(mk)
-                    tools = self.manager.get_tools_for_market(ex, mk) or []
-                    for tl in tools:
-                        act = QAction(tl, self)
-                        act.triggered.connect(
-                            lambda chk=False, e=ex, m=mk, t=tl: self.on_tool_selected(e, m, t)
-                        )
-                        mk_m.addAction(act)
-        except Exception as e:
-            self.log.error(f"Ошибка построения меню: {e}")
+        # Инициализация меню через внешний менеджер
+        self.menu_controller = MenuManager(self)
+        self.menu_controller.setup_ui()
 
     def show_default_chart(self):
         self.clear_layout()
@@ -100,7 +57,7 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(chart)
 
     def on_tool_selected(self, e, m, t):
-        self.log.info(f"Выбран инструмент: {e} -> {m} -> {t}")
+        self.log.info(f"Selected: {e} -> {t}")
         self.clear_layout()
         chart = CandlestickChart([(10, 20, 5, 15)], f"Chart: {e} | {t}")
         self.layout.addWidget(chart)
