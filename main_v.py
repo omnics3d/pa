@@ -1,103 +1,79 @@
 import sys
 import os
-import urllib.request
 import importlib.util
 import shutil
 from PySide6.QtWidgets import QApplication
 
-# --- КОНСТАНТЫ ---
-SERVER_URL = "http://127.0.0.1:8080/"
-REQUIRED_FILES = [
-    "utils/__init__.py", 
-    "utils/main_window.py", 
-    "core/__init__.py", 
-    "core/logger_v2026.py"
-]
-
-def send_log(message):
-    try:
-        data = str(message).encode('utf-8')
-        req = urllib.request.Request(SERVER_URL + "log", data=data, method='POST')
-        with urllib.request.urlopen(req, timeout=2) as r:
-            return r.status == 200
-    except:
+def check_x11():
+    """Проверка DISPLAY из .bashrc"""
+    display = os.environ.get("DISPLAY")
+    if not display:
+        print("ОШИБКА: Переменная DISPLAY не найдена. Проверьте .bashrc")
         return False
+    print(f"[*] X11 OK: DISPLAY={display}")
+    return True
 
-def sync():
-    print("--- ПРИНУДИТЕЛЬНАЯ СИНХРОНИЗАЦИЯ ---")
-    
-    # 1. Очистка кэша байт-кода
+def clear_cache():
+    """Очистка кэша Python для чистого запуска модулей"""
+    print("--- ОЧИСТКА КЭША (2026) ---")
     for folder in ["utils", "core"]:
         pycache = os.path.join(folder, "__pycache__")
         if os.path.exists(pycache):
             shutil.rmtree(pycache)
-
-    # 2. Перезапись файлов
-    for file_path in REQUIRED_FILES:
-        folder = os.path.dirname(file_path)
-        if folder and not os.path.exists(folder):
-            os.makedirs(folder, exist_ok=True)
-        
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            
-        try:
-            # Анти-кэш параметр в URL
-            url = SERVER_URL + file_path + f"?t={os.urandom(4).hex()}"
-            with urllib.request.urlopen(url, timeout=5) as r:
-                content = r.read()
-                with open(file_path, "wb") as f:
-                    f.write(content)
-            print(f"ОК (загружено): {file_path}")
-        except Exception as e:
-            print(f"ОШИБКА {file_path}: {e}")
+            print(f"  [+] Очищен кэш: {folder}")
 
 def load_module_from_file(module_name, file_path):
-    """Принудительная загрузка модуля прямо из файла"""
+    """Загрузка модуля напрямую из локального файла"""
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Файл {file_path} отсутствует в корне проекта!")
+    
     spec = importlib.util.spec_from_file_location(module_name, file_path)
-    if spec is None:
-        raise ImportError(f"Не удалось создать спецификацию для {file_path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
 
 def main():
-    # Настройка путей
+    # Установка рабочей директории в корень проекта
     base = os.path.dirname(os.path.abspath(__file__))
     os.chdir(base)
     if base not in sys.path:
         sys.path.insert(0, base)
 
-    # Выполняем синхронизацию
-    sync()
+    # Проверка графической среды
+    if not check_x11():
+        sys.exit(1)
 
-    # Инициализация логгера (из свежезагруженного файла)
+    # Очистка старых данных перед импортом
+    clear_cache()
+
+    # Инициализация Qt
+    app = QApplication(sys.argv)
+    app.setStyle("Fusion") 
+    app.setApplicationName("Termux_Local_XFCE")
+
+    # 1. Загрузка логгера (локально)
     try:
         core_log = load_module_from_file("core.logger_v2026", "core/logger_v2026.py")
         core_log.setup_logging(level="DEBUG")
         log = core_log.get_logger("Bootloader")
-        log.info("Система логирования обновлена и запущена")
+        log.info("Приложение запущено локально в XFCE")
     except Exception as e:
-        print(f"Предупреждение: логгер не инициализирован: {e}")
+        print(f"[-] Ошибка логгера: {e}")
 
-    app = QApplication(sys.argv)
-    app.setStyle("Fusion")
-
+    # 2. Загрузка основного окна (локально)
     try:
-        # Гарантированная загрузка нового GUI
         main_window_module = load_module_from_file("utils.main_window", "utils/main_window.py")
         
         global win
         win = main_window_module.MainWindow()
         win.show()
         
-        send_log("GUI запущен: версия с верхним меню")
+        print("[*] GUI успешно выведен на рабочий стол.")
         sys.exit(app.exec())
     except Exception as e:
-        err_msg = f"Критическая ошибка при запуске модуля: {e}"
-        print(err_msg)
-        send_log(err_msg)
+        print(f"[-] Критическая ошибка при открытии окна: {e}")
 
 if __name__ == "__main__":
     main()
+
