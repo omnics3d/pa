@@ -1,135 +1,98 @@
 import sys
-from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout
-from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QFont
+import os
+from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QMenu
+from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QAction
 from PySide6.QtCore import Qt, QRectF
 from core.logger_v2026 import get_logger
 
+# Пытаемся импортировать менеджер, если он есть
+try:
+    from core.exchange_manager import ExchangeDataManager
+except ImportError:
+    ExchangeDataManager = None
+
 class CandlestickChart(QWidget):
-    def __init__(self, data):
+    def __init__(self, data, title="Chart"):
         super().__init__()
-        # Формат данных: [(Open, High, Low, Close), ...]
         self.data = data
-        self.resistance_level = 115.0 # Пример уровня сопротивления
-        self.support_level = 95.0    # Пример уровня поддержки
+        self.title = title
 
     def paintEvent(self, event):
-        if not self.data:
-            return
-
+        if not self.data: return
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        
-        # 1. Фон
-        painter.fillRect(self.rect(), QColor("#121212")) # Темная тема
-
-        # 2. Расчет масштабов
-        width = self.width()
-        height = self.height()
-        padding = 60
-        
-        # Находим min/max цены для масштабирования по вертикали
-        all_prices = []
-        for o, h, l, c in self.data:
-            all_prices.extend([o, h, l, c])
-        all_prices.extend([self.resistance_level, self.support_level])
-        
-        max_p = max(all_prices) * 1.05
-        min_p = min(all_prices) * 0.95
-        price_range = max_p - min_p
-
-        def price_to_y(price):
-            relative_p = (price - min_p) / price_range
-            return height - padding - (relative_p * (height - 2 * padding))
-
-        # 3. Рисуем сетку и ценовые метки
-        painter.setPen(QPen(QColor("#333333"), 1))
-        for i in range(6):
-            p = min_p + (price_range / 5) * i
-            y = price_to_y(p)
-            painter.drawLine(padding, y, width - padding, y)
-            painter.setPen(QPen(QColor("#888888")))
-            painter.drawText(width - padding + 5, y + 5, f"{p:.1f}")
-            painter.setPen(QPen(QColor("#333333"), 1))
-
-        # 4. Рисуем прерывистые линии (Индикаторы/Уровни)
-        # Сопротивление (Красная прерывистая)
-        pen_red = QPen(QColor("#FF4444"), 2, Qt.DashLine)
-        painter.setPen(pen_red)
-        y_res = price_to_y(self.resistance_level)
-        painter.drawLine(padding, y_res, width - padding, y_res)
-        
-        # Поддержка (Зеленая прерывистая)
-        pen_green = QPen(QColor("#44FF44"), 2, Qt.CustomDashLine)
-        pen_green.setDashPattern([4, 4]) # Настройка пунктира
-        painter.setPen(pen_green)
-        y_sup = price_to_y(self.support_level)
-        painter.drawLine(padding, y_sup, width - padding, y_sup)
-
-        # 5. Рисуем японские свечи
-        candle_space = (width - 2 * padding) / len(self.data)
-        candle_width = candle_space * 0.8
-        
-        for i, (O, H, L, C) in enumerate(self.data):
-            x_center = padding + i * candle_space + candle_space / 2
-            x_left = x_center - candle_width / 2
-            
-            is_bull = C >= O
-            color = QColor("#26a69a") if is_bull else QColor("#ef5350")
-            
-            # Фитиль (High - Low)
-            painter.setPen(QPen(color, 1.5))
-            painter.drawLine(x_center, price_to_y(H), x_center, price_to_y(L))
-            
-            # Тело свечи
-            painter.setBrush(QBrush(color))
-            y_top = price_to_y(max(O, C))
-            y_bottom = price_to_y(min(O, C))
-            body_h = max(abs(y_top - y_bottom), 1) # Минимум 1 пиксель
-            
-            painter.drawRect(QRectF(x_left, y_top, candle_width, body_h))
+        painter.fillRect(self.rect(), QColor("#121212"))
+        painter.setPen(QColor("#FFFFFF"))
+        painter.drawText(20, 20, self.title)
+        # Упрощенная отрисовка для теста стабильности
+        painter.setPen(QPen(QColor("green"), 2))
+        painter.drawLine(0, self.height()//2, self.width(), self.height()//2)
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.log = get_logger("GUI")
-        self.setWindowTitle("Termux Native FinChart 2026")
+        self.log = get_logger("GUI_2026")
+        self.setWindowTitle("Termux FinChart 2026")
         self.resize(800, 600)
         
-        # Пример данных (OHLC)
-        self.stock_data = [
-            (100, 105, 98, 102),
-            (102, 108, 101, 107),
-            (107, 118, 106, 115),
-            (115, 116, 110, 112),
-            (112, 114, 105, 106),
-            (106, 110, 95, 98),
-            (98, 105, 97, 104)
-        ]
+        # Безопасный поиск XML
+        self.manager = None
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        xml_path = os.path.join(base_dir, "config.xml")
+        
+        if ExchangeDataManager and os.path.exists(xml_path):
+            try:
+                self.manager = ExchangeDataManager(xml_path)
+            except Exception as e:
+                print(f"XML Load Error: {e}")
 
         self.central = QWidget()
         self.setCentralWidget(self.central)
         self.layout = QVBoxLayout(self.central)
-        
         self.init_menu()
-        self.log.info("Native QPainter Chart initialized")
 
     def init_menu(self):
         bar = self.menuBar()
-        bar.setNativeMenuBar(False)
+        # В Termux/Android лучше НЕ трогать NativeMenuBar
+        # bar.setNativeMenuBar(False) 
         
+        # 1. Основная кнопка
         graph_act = bar.addAction("Graph")
-        graph_act.triggered.connect(self.show_chart)
+        graph_act.triggered.connect(self.show_default_chart)
         
-        bar.addAction("Options")
-        bar.addAction("Settings")
+        # 2. Динамическое меню выбора (Select)
+        if self.manager:
+            self.select_menu = bar.addMenu("Select")
+            self.build_dynamic_menu(self.select_menu)
 
-    def show_chart(self):
-        # Очистка
-        for i in reversed(range(self.layout.count())): 
-            self.layout.itemAt(i).widget().setParent(None)
-            
-        # Показ графика
-        chart = CandlestickChart(self.stock_data)
+    def build_dynamic_menu(self, menu):
+        try:
+            exchanges = self.manager.get_exchange_names()
+            for ex in exchanges:
+                ex_m = menu.addMenu(ex)
+                markets = self.manager.get_markets_for_exchange(ex) or []
+                for mk in markets:
+                    mk_m = ex_m.addMenu(mk)
+                    tools = self.manager.get_tools_for_market(ex, mk) or []
+                    for tl in tools:
+                        act = QAction(tl, self)
+                        # Замыкание параметров
+                        act.triggered.connect(lambda chk=False, e=ex, m=mk, t=tl: self.on_tool_selected(e,m,t))
+                        mk_m.addAction(act)
+        except Exception as e:
+            self.log.error(f"Menu build failed: {e}")
+
+    def show_default_chart(self):
+        self.clear_layout()
+        chart = CandlestickChart([(10,20,5,15)], "Default Chart")
         self.layout.addWidget(chart)
-        self.log.info("Rendering manual candles with dash lines")
+
+    def on_tool_selected(self, e, m, t):
+        self.clear_layout()
+        chart = CandlestickChart([(10,20,5,15)], f"{e}:{t}")
+        self.layout.addWidget(chart)
+
+    def clear_layout(self):
+        while self.layout.count():
+            item = self.layout.takeAt(0)
+            if item.widget(): item.widget().deleteLater()
 
