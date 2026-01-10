@@ -34,7 +34,10 @@ logger = get_logger("MainManager")
 
 
 def clear_screen() -> None:
-    """Очищает консоль терминала."""
+    #{{{
+    """ Очищает консоль терминала.
+    """
+    #}}}
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
