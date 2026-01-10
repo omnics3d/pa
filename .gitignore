@@ -7,4 +7,5 @@ storage/reports/
 utils/__pycache__/
 utils/menu_manager.py
 .pyproject.toml.swp
+view/__pycache__/
 
