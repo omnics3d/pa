@@ -2,7 +2,6 @@ core/__pycache__/
 core/exchange_manager_pydantic.py
 data/
 logs/
-pyproject.toml
 start-xfce.sh
 storage/reports/
 utils/__pycache__/
