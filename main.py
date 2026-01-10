@@ -6,7 +6,7 @@ import time
 from typing import Final, Any
 
 # Локальные импорты
-from core.logger_v2026_2_code import setup_logging, get_logger
+from core.logger_v2026 import setup_logging, get_logger
 
 # Константы (PEP 8: до 79 символов)
 SCRIPTS_DIR: Final[str] = "tasks"

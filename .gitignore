@@ -7,3 +7,5 @@ start-xfce.sh
 storage/reports/
 utils/__pycache__/
 utils/menu_manager.py
+.pyproject.toml.swp
+
