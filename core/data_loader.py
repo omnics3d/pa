@@ -7,89 +7,83 @@ class DataLoader:
     def __init__(self, base_path: str, tool_name: str):
         self.base_path = base_path
         self.tool_name = tool_name
+        # Сохраняем дату, на которой остановились, для подгрузки истории
+        self._last_processed_date: Optional[datetime] = None
 
     def _get_filename(self, date: datetime) -> str:
         """Формирует имя файла: DOGEUSDT-1m-2021-08-30.csv"""
         return f"{self.tool_name}-1m-{date.strftime('%Y-%m-%d')}.csv"
 
-    def get_candles(self, start_date_str: str, end_date_str: str, timeframe_min: int = 1) -> List[Dict]:
+    def get_candles(self, start_date_str: str, end_date_str: str, timeframe_min: int = 1, 
+                    limit: int = 1000, offset_date: datetime = None) -> List[Dict]:
         """
-        Потоковая агрегация: читает файлы по дням и собирает свечу заданного размера.
-        Эффективно работает с любыми таймфреймами (от 1 до 10032+ минут).
+        Загружает свечи с конца. 
+        limit: сколько свечей нужно (экран + запас).
+        offset_date: с какой даты начинать (для подгрузки глубокой истории).
         """
-        start_dt = datetime.strptime(start_date_str, "%Y-%m-%d")
-        end_dt = datetime.strptime(end_date_str, "%Y-%m-%d")
+        abs_start_dt = datetime.strptime(start_date_str, "%Y-%m-%d")
+        search_end_dt = offset_date if offset_date else datetime.strptime(end_date_str, "%Y-%m-%d")
         
-        aggregated_candles = []
-        buffer = []  # Накопитель минут для формирования одной свечи ТФ
+        tf_seconds = timeframe_min * 60
+        loaded_candles = []
+        current_candle = None
         
-        current_dt = start_dt
-        while current_dt <= end_dt:
+        current_dt = search_end_dt
+        
+        while current_dt >= abs_start_dt and len(loaded_candles) < limit:
             file_path = os.path.join(self.base_path, self._get_filename(current_dt))
             
             if os.path.exists(file_path):
-                # Читаем данные дня через универсальный парсер
                 day_minutes = self._read_csv(file_path)
-                
-                for minute_candle in day_minutes:
-                    buffer.append(minute_candle)
+                # Перебор минут дня в обратном порядке
+                for m in reversed(day_minutes):
+                    interval_start = (m['t'] // tf_seconds) * tf_seconds
                     
-                    # Если накопили достаточно минут для одного ТФ
-                    if len(buffer) == timeframe_min:
-                        aggregated_candles.append(self._make_candle(buffer))
-                        buffer = []
+                    if current_candle is None or current_candle['t'] != interval_start:
+                        if current_candle:
+                            loaded_candles.append(current_candle)
+                            if len(loaded_candles) >= limit: break
+                        
+                        current_candle = {
+                            't': interval_start, 'o': m['o'], 'h': m['h'], 'l': m['l'], 'c': m['c']
+                        }
+                    else:
+                        # Движемся назад: Open — это самая ранняя точка
+                        current_candle['o'] = m['o']
+                        if m['h'] > current_candle['h']: current_candle['h'] = m['h']
+                        if m['l'] < current_candle['l']: current_candle['l'] = m['l']
+                
+                if len(loaded_candles) >= limit: break
             
-            current_dt += timedelta(days=1)
-            
-        # Добавляем последнюю неполную свечу, если в буфере что-то осталось
-        if buffer:
-            aggregated_candles.append(self._make_candle(buffer))
-            
-        return aggregated_candles
+            current_dt -= timedelta(days=1)
+        
+        if current_candle and len(loaded_candles) < limit:
+            loaded_candles.append(current_candle)
+
+        self._last_processed_date = current_dt - timedelta(days=1)
+        
+        # Сортируем от старых к новым для правильной отрисовки слева направо
+        return sorted(loaded_candles, key=lambda x: x['t'])
 
     def _read_csv(self, path: str) -> List[Dict]:
-        """
-        Универсальное чтение CSV: поддерживает файлы с заголовками и без.
-        Использует позиционное чтение колонок (0-time, 1-open, 2-high, 3-low, 4-close).
-        """
-        day_data = []
+        data = []
         try:
-            with open(path, mode='r', encoding='utf-8') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 reader = csv.reader(f)
                 for row in reader:
-                    # Пропуск пустых строк или строк с недостаточным кол-вом данных
-                    if not row or len(row) < 5:
-                        continue
-                    
-                    # Проверка: если первая колонка не число (заголовок), пропускаем строку
-                    # Очищаем от возможных кавычек и пробелов перед проверкой
-                    first_val = row[0].strip().replace('"', '')
-                    if not first_val.replace('.', '', 1).replace('-', '', 1).isdigit():
-                        continue
-                        
+                    if len(row) < 5: continue
+                    t_str = row[0].strip().replace('"', '')
+                    if not t_str.replace('.', '', 1).isdigit(): continue
                     try:
-                        day_data.append({
-                            't': int(float(row[0])), # timestamp
-                            'o': float(row[1]),      # open
-                            'h': float(row[2]),      # high
-                            'l': float(row[3]),      # low
-                            'c': float(row[4])       # close
+                        t_val = int(float(t_str))
+                        if t_val > 2000000000: t_val //= 1000 # Коррекция ms -> s
+                        data.append({
+                            't': t_val,
+                            'o': float(row[1]), 'h': float(row[2]), 
+                            'l': float(row[3]), 'c': float(row[4])
                         })
-                    except (ValueError, IndexError):
-                        continue # Пропуск битых строк данных
+                    except: continue
         except Exception as e:
-            # Логируем ошибку, но не прерываем работу программы
             print(f"Error reading {path}: {e}")
-            
-        return day_data
-
-    def _make_candle(self, chunk: List[Dict]) -> Dict:
-        """Превращает набор минут в одну итоговую японскую свечу."""
-        return {
-            't': chunk[0]['t'],               # Время открытия (первая минута)
-            'o': chunk[0]['o'],               # Цена открытия
-            'h': max(m['h'] for m in chunk),  # Максимум за период
-            'l': min(m['l'] for m in chunk),  # Минимум за период
-            'c': chunk[-1]['c']               # Цена закрытия (последняя минута)
-        }
+        return data
 
