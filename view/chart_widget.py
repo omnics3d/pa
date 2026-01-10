@@ -1,7 +1,6 @@
 from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QWheelEvent, QMouseEvent
-from PySide6.QtCore import Qt
-from view.touch_handler import TouchHandler
+from PySide6.QtCore import Qt, QPoint
 
 class CandlestickChart(QWidget):
     def __init__(self, data, title="Chart", candle_width_px=4):
@@ -10,38 +9,44 @@ class CandlestickChart(QWidget):
         self.title = title
         self.candle_width = candle_width_px
         self.scroll_offset = 0
-        self.touch_handler = TouchHandler(self.apply_scroll_delta)
         self.setMouseTracking(True)
+        self._last_mouse_pos = QPoint()
 
     def apply_scroll_delta(self, delta_candles):
         old_offset = self.scroll_offset
-        self.scroll_offset = max(0, min(self.scroll_offset - delta_candles, len(self.data) - 5))
+        self.scroll_offset = max(0, min(self.scroll_offset + delta_candles, len(self.data) - 5))
         if old_offset != self.scroll_offset:
             self.update()
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.LeftButton:
-            self.touch_handler.handle_press(event.pos())
+            self._last_mouse_pos = event.pos()
 
     def mouseMoveEvent(self, event: QMouseEvent):
-        delta = self.touch_handler.handle_move(event.pos(), self.candle_width)
-        if delta != 0: self.apply_scroll_delta(delta)
-
-    def mouseReleaseEvent(self, event: QMouseEvent):
-        if event.button() == Qt.LeftButton:
-            self.touch_handler.handle_release()
+        if event.buttons() & Qt.LeftButton:
+            dx = event.pos().x() - self._last_mouse_pos.x()
+            delta_candles = dx // (self.candle_width + 1)
+            if delta_candles != 0:
+                self.apply_scroll_delta(-delta_candles)
+                self._last_mouse_pos = event.pos()
 
     def wheelEvent(self, event: QWheelEvent):
-        ay, ax = event.angleDelta().y(), event.angleDelta().x()
-        if ay != 0:
-            new_zoom = self.touch_handler.handle_wheel_zoom(ay, self.candle_width)
-            if new_zoom != self.candle_width:
-                self.candle_width = new_zoom
-                try: self.parentWidget().parent().zoom_level_px = new_zoom
-                except: pass
+        delta = event.angleDelta().y()
+        if delta != 0:
+            old_zoom = self.candle_width
+            if delta > 0:
+                self.candle_width = min(self.candle_width + 1, 50)
+            else:
+                self.candle_width = max(self.candle_width - 1, 1)
+            
+            if old_zoom != self.candle_width:
+                try:
+                    main_win = self.window()
+                    if hasattr(main_win, 'zoom_level_px'):
+                        main_win.zoom_level_px = self.candle_width
+                except Exception: 
+                    pass
                 self.update()
-        elif ax != 0:
-            self.apply_scroll_delta(ax // 120 * 3)
 
     def paintEvent(self, event):
         painter = QPainter(self)
