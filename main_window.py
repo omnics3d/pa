@@ -24,3 +24,12 @@ class MainWindow(QMainWindow):
         splitter.addWidget(bottom)
         layout.addWidget(splitter)
 
+	def custom_timeframe_dialog(self) -> None:
+    	"""Заглушка для вызова диалога выбора точных минут."""
+    	# Используем твой логер для фиксации нажатия
+    	if hasattr(self, 'logger'):
+        	self.logger.info("Нажата кнопка 'Exact minutes' (функционал в разработке)")
+    	else:
+        	print("Вызов 'Exact minutes...' (заглушка)")
+
+
