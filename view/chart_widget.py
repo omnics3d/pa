@@ -1,10 +1,10 @@
 import math
-import time
 from PySide6.QtWidgets import (QWidget, QScrollBar, QVBoxLayout, 
     QHBoxLayout, QSpacerItem, QSizePolicy)
 from PySide6.QtGui import (QPainter, QColor, QPen, QBrush, 
     QMouseEvent)
 from PySide6.QtCore import Qt, QPoint, QRect, QRectF
+from .prices_cale import PriceScale # Исправлен путь к компоненту
 
 class CandlestickChart(QWidget):
     def __init__(self, data, title="Chart", candle_width_px=4):
@@ -13,11 +13,10 @@ class CandlestickChart(QWidget):
         self.title = title
         self.candle_width = float(candle_width_px)
         self.scroll_offset = 0 
-        self.price_scale_width = 70 
         
-        # Вертикальный зум
-        self.vertical_zoom = 1.0
-        self._is_scaling_price = False
+        # Инициализация выделенной шкалы цен
+        self.price_scale = PriceScale(self)
+        self.price_scale_width = self.price_scale.width
         
         self.btn_zoom_in = QRect()
         self.btn_zoom_out = QRect()
@@ -58,24 +57,13 @@ class CandlestickChart(QWidget):
         self._update_scroll_range()
 
     def _apply_zoom(self, delta):
-        # ЛИНЕЙНЫЙ ШАГ БЕЗ ПРОГРЕССИИ
-        # delta это +1 или -1. Просто прибавляем/вычитаем единицу.
-        # Нижний порог 1.0 не дает графику схлопнуться.
-        self.candle_width = max(1.0, self.candle_width + delta)
-        
-        try:
-            main_win = self.window()
-            if hasattr(main_win, 'zoom_level_px'):
-                main_win.zoom_level_px = int(self.candle_width)
-        except: pass
+        fixed_step = 2.0 
+        self.candle_width = max(1.0, self.candle_width + (delta * fixed_step))
         self._update_scroll_range()
         self.update()
 
     def _update_scroll_range(self):
-        if not self.data:
-            self.scrollbar.hide()
-            return
-        self.scrollbar.show()
+        if not self.data: return
         chart_w = self.width() - self.price_scale_width
         num_on_screen = max(1, int(chart_w // (self.candle_width + 0.001)))
         max_scroll = max(0, len(self.data) - num_on_screen)
@@ -98,21 +86,16 @@ class CandlestickChart(QWidget):
             self.scrollbar.blockSignals(False)
             self.update()
 
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self._update_scroll_range()
-
     def mousePressEvent(self, event: QMouseEvent):
         pos = event.pos()
-        if pos.x() > self.width() - self.price_scale_width:
-            self._is_scaling_price = True
+        if self.price_scale.handle_press(pos):
             self._last_mouse_pos = pos
             return
         if self.btn_zoom_in.contains(pos):
-            self._apply_zoom(1.0)
+            self._apply_zoom(1)
             return
         if self.btn_zoom_out.contains(pos):
-            self._apply_zoom(-1.0)
+            self._apply_zoom(-1)
             return
         if event.button() == Qt.LeftButton:
             self._last_mouse_pos = event.pos()
@@ -120,20 +103,13 @@ class CandlestickChart(QWidget):
     def mouseMoveEvent(self, event: QMouseEvent):
         if event.buttons() & Qt.LeftButton:
             pos = event.pos()
-            dy = pos.y() - self._last_mouse_pos.y()
-            
-            if self._is_scaling_price:
-                # ПЛАВНЫЙ ПРОГРЕССИВНЫЙ ВЕРТИКАЛЬНЫЙ ЗУМ (СОХРАНЕН)
-                zoom_factor = math.pow(2.0, dy / 150.0)
-                self.vertical_zoom = max(0.000001, self.vertical_zoom * zoom_factor)
+            if self.price_scale.handle_move(pos, self._last_mouse_pos):
                 self._last_mouse_pos = pos
                 self.update()
                 return
-
             if (self.btn_zoom_in.contains(pos) or 
                 self.btn_zoom_out.contains(pos)):
                 return
-            
             dx = pos.x() - self._last_mouse_pos.x()
             delta_c = int(dx / (self.candle_width + 0.001))
             if delta_c != 0:
@@ -141,35 +117,27 @@ class CandlestickChart(QWidget):
                 self._last_mouse_pos = pos
 
     def mouseReleaseEvent(self, event: QMouseEvent):
-        self._is_scaling_price = False
+        self.price_scale.handle_release()
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setRenderHint(QPainter.SmoothPixmapTransform)
         painter.fillRect(self.rect(), QColor("#121212"))
-        if not self.data:
-            painter.setPen(QColor("#FFFFFF"))
-            painter.drawText(self.rect(), Qt.AlignCenter, "No Data")
-            return
+        if not self.data: return
         rev_data = list(reversed(self.data))
-        vis_list = rev_data[self.scroll_offset:]
         chart_w = self.width() - self.price_scale_width
         n_scr = max(1, int(chart_w // (self.candle_width + 0.001)))
         on_scr = rev_data[self.scroll_offset:self.scroll_offset+n_scr]
         if not on_scr: return
-        
         avg_p = (max(c['h'] for c in on_scr) + min(c['l'] for c in on_scr)) / 2
         range_p = (max(c['h'] for c in on_scr) - min(c['l'] for c in on_scr)) or 1
-        
-        max_p = avg_p + (range_p * self.vertical_zoom) / 2
-        min_p = avg_p - (range_p * self.vertical_zoom) / 2
+        max_p = avg_p + (range_p * self.price_scale.vertical_zoom) / 2
+        min_p = avg_p - (range_p * self.price_scale.vertical_zoom) / 2
         diff = (max_p - min_p) or 1
-        
         chart_h = self.height() - 42; top_m = 30
-        self._draw_price_scale_and_grid(painter, min_p, max_p, 
-                                        chart_h, top_m, chart_w)
-        for i, c in enumerate(vis_list):
+        self.price_scale.draw(painter, min_p, max_p, chart_h, top_m)
+        for i, c in enumerate(rev_data[self.scroll_offset:]):
             x = float(chart_w - (i * (self.candle_width + 0.001)) - 10)
             if x < -self.candle_width: break
             y_o = chart_h - ((c['o']-min_p)/diff)*chart_h + top_m
@@ -194,33 +162,4 @@ class CandlestickChart(QWidget):
         f.setPixelSize(22); painter.setFont(f)
         painter.drawText(self.btn_zoom_in, Qt.AlignCenter, "+")
         painter.drawText(self.btn_zoom_out, Qt.AlignCenter, "-")
-        painter.setPen(QColor("#FFFFFF")); f.setPixelSize(10); painter.setFont(f)
-        painter.drawText(20, 20, f"{self.title} | Zoom: {self.candle_width:.2f}px")
-
-    def _draw_price_scale_and_grid(self, painter, min_p, max_p, 
-                                   chart_h, top_m, chart_w):
-        if max_p == min_p: return
-        s_rect = QRect(chart_w, 0, self.price_scale_width, self.height())
-        painter.fillRect(s_rect, QColor("#1e1e1e"))
-        painter.setPen(QPen(QColor("#444444"), 1))
-        painter.drawLine(chart_w, 0, chart_w, self.height())
-        r_step = (max_p - min_p) / 15
-        mag = 10**math.floor(math.log10(abs(r_step))) if r_step != 0 else 1
-        res = abs(r_step / mag)
-        if res < 1.5: step = 1 * mag
-        elif res < 3: step = 2 * mag
-        elif res < 7: step = 5 * mag
-        else: step = 10 * mag
-        start_p = math.ceil(min_p / step) * step
-        prec = max(0, -math.floor(math.log10(step))) if step < 1 else 0
-        fmt = "{:." + str(prec) + "f}"; curr_p = start_p
-        while curr_p <= max_p:
-            y = chart_h - ((curr_p - min_p)/(max_p-min_p)*chart_h) + top_m
-            if 0 <= y <= self.height():
-                painter.setPen(QPen(QColor(255, 255, 255, 30), 1))
-                painter.drawLine(0, int(y), chart_w, int(y))
-                painter.setPen(QColor("#CCCCCC"))
-                painter.drawText(chart_w + 5, int(y + 5), fmt.format(curr_p))
-            curr_p += step
-            if step <= 0: break
 
