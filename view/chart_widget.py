@@ -3,10 +3,12 @@ from PySide6.QtWidgets import (QWidget, QScrollBar, QVBoxLayout,
     QHBoxLayout, QSpacerItem, QSizePolicy)
 from PySide6.QtGui import (QPainter, QColor, QPen, QBrush, 
     QMouseEvent)
-from PySide6.QtCore import Qt, QPoint, QRect, QRectF
+from PySide6.QtCore import Qt, QPoint, QRect, QRectF, Signal
 from .prices_cale import PriceScale # Исправлен путь к компоненту
 
 class CandlestickChart(QWidget):
+    need_more_data = Signal()
+
     def __init__(self, data, title="Chart", candle_width_px=4):
         super().__init__()
         self.data = data
@@ -73,12 +75,16 @@ class CandlestickChart(QWidget):
         self.scrollbar.blockSignals(False)
 
     def _on_scrollbar_moved(self, value):
+        if value <= 5:
+            self.need_more_data.emit()
         self.scroll_offset = self.scrollbar.maximum() - value
         self.update()
 
     def apply_scroll_delta(self, delta_candles):
         max_s = self.scrollbar.maximum()
         new_off = max(0, min(self.scroll_offset + delta_candles, max_s))
+        if new_off >= max_s - 5 and delta_candles > 0:
+            self.need_more_data.emit()
         if new_off != self.scroll_offset:
             self.scroll_offset = new_off
             self.scrollbar.blockSignals(True)
