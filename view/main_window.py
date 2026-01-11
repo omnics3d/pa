@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QInputDialog
 from core.logger_v2026 import get_logger
-from utils.menu_manager import MenuManager
+from .menu_manager import MenuManager
 from core.data_loader import DataLoader
 from view.chart_widget import CandlestickChart
 

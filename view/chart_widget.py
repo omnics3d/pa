@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (QWidget, QScrollBar, QVBoxLayout,
 from PySide6.QtGui import (QPainter, QColor, QPen, QBrush, 
     QMouseEvent)
 from PySide6.QtCore import Qt, QPoint, QRect, QRectF, Signal
-from .prices_cale import PriceScale # Исправлен путь к компоненту
+from .price_scale import PriceScale # Исправлен путь к компоненту
 
 class CandlestickChart(QWidget):
     need_more_data = Signal()
