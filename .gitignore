@@ -7,4 +7,9 @@ storage/reports/
 utils/__pycache__/
 .pyproject.toml.swp
 view/__pycache__/
-
+pa1/
+pa2/
+pa2_4.py
+render_debug.log
+view/.chart_widget.py.swp
+view/.main_window.py.swp
