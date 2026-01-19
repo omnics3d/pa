@@ -1,28 +1,23 @@
-import importlib
-import os
-import shutil
-import sys
-import time
-from typing import Final, Any
+"""
+Главный управляющий скрипт программы.
+Точка входа в приложение.
+"""
 
-# Локальные импорты
+# Абсолютные импорты (явные, без реэкспорта)
 from core.logger_v2026 import setup_logging, get_logger
 
-# Константы (PEP 8: до 79 символов)
-SCRIPTS_DIR: Final[str] = "tasks"
-MENU_STRUCTURE: Final[dict[str, dict[str, Any]]] = {
-    "1": {
-        "title": "СТАТИСТИКА",
-        "scripts": {
-            "1": ("trend_validator", "Trend Validator (Анализ свечей)")
-        }
-    },
-    "2": {
-        "title": "АНАЛИТИКА",
-        "scripts": {}
-    }
-}
+# Импорты из cli с явным указанием модулей
+from cli.config import SCRIPTS_DIR, MENU_STRUCTURE
+from cli.menu_manager import (
+    clear_screen, 
+    display_main_menu, 
+    display_section_menu,
+    get_user_choice,
+    handle_invalid_choice
+)
+from cli.script_runner import ScriptRunner
 
+# Настройка логирования
 setup_logging(
     level="DEBUG",
     log_files={"DEBUG": "logs/all_scripts.log"},
@@ -33,99 +28,116 @@ setup_logging(
 logger = get_logger("MainManager")
 
 
-def clear_screen() -> None:
-    #{{{
-    """ Очищает консоль терминала.
+class Application:
     """
-    #}}}
-    os.system('cls' if os.name == 'nt' else 'clear')
-
-
-def move_cursor_to_bottom(menu_height: int) -> None:
-    """Смещает меню к нижней части экрана."""
-    _, lines = shutil.get_terminal_size()
-    start_line = max(1, lines - menu_height)
-    sys.stdout.write(f"\033[{start_line};1H")
-    sys.stdout.flush()
-
-
-def run_task(script_name: str) -> None:
-    """Динамически импортирует и запускает функцию run() модуля."""
-    clear_screen()
-    module_path: str = f"{SCRIPTS_DIR}.{script_name}"
-
-    try:
-        logger.info("Запуск модуля: %s", module_path)
-
-        if module_path in sys.modules:
-            module = importlib.reload(sys.modules[module_path])
-        else:
-            module = importlib.import_module(module_path)
-
-        if (run_func := getattr(module, 'run', None)) and callable(run_func):
-            run_func()
-        else:
-            logger.error("Функция run() не найдена в %s", module_path)
-
-    except Exception as e:
-        logger.critical(
-            "Ошибка в %s: %s", script_name, e, exc_info=True
-        )
-
-    print(f"\n{'-' * 40}")
-    input("Нажмите Enter для возврата в меню...")
-
-
-def main() -> None:
-    """Главный цикл управления программой."""
-    try:
+    Основной класс приложения.
+    Управляет жизненным циклом и навигацией.
+    """
+    
+    def __init__(self):
+        """Инициализация приложения."""
+        self.script_runner = ScriptRunner(SCRIPTS_DIR)
+        self.menu_structure = MENU_STRUCTURE
+    
+    def run(self) -> None:
+        """
+        Главный цикл управления программой.
+        """
+        try:
+            self._main_loop()
+        except KeyboardInterrupt:
+            logger.info("Программа остановлена пользователем.")
+        except Exception as e:
+            logger.critical("Неожиданная ошибка: %s", e, exc_info=True)
+        finally:
+            self._shutdown()
+    
+    def _main_loop(self) -> None:
+        """Основной цикл навигации."""
         while True:
             clear_screen()
-            menu_h = len(MENU_STRUCTURE) + 6
-            move_cursor_to_bottom(menu_h)
-
-            print("--- ГЛАВНОЕ МЕНЮ (2026.2) ---")
-            for key, section in MENU_STRUCTURE.items():
-                print(f"{key}. Раздел: {section['title']}")
-            print("0. Выход")
-
-            choice = input("\nВыберите раздел: ").strip()
-
+            display_main_menu(self.menu_structure)
+            
+            choice = get_user_choice("\nВыберите раздел: ")
+            
             if choice == "0":
                 logger.info("Пользователь инициировал выход.")
                 break
-
-            if section := MENU_STRUCTURE.get(choice):
-                while True:
-                    clear_screen()
-                    scripts = section['scripts']
-                    sub_menu_h = len(scripts) + 6
-                    move_cursor_to_bottom(sub_menu_h)
-
-                    print(f"--- РАЗДЕЛ: {section['title']} ---")
-                    for s_key, (_, s_desc) in scripts.items():
-                        print(f"{s_key}. {s_desc}")
-                    print("0. Назад")
-
-                    s_choice = input("\nВыберите скрипт: ").strip()
-
-                    if s_choice == "0":
-                        break
-
-                    if script_data := scripts.get(s_choice):
-                        script_name, _ = script_data
-                        run_task(script_name)
-                        break
-            else:
-                if choice:
-                    print("Ошибка: неверный пункт.")
-                    time.sleep(0.5)
-
-    except KeyboardInterrupt:
-        logger.info("Программа остановлена пользователем.")
-    finally:
+            
+            if self._handle_section_choice(choice):
+                continue
+    
+    def _handle_section_choice(self, choice: str) -> bool:
+        """
+        Обрабатывает выбор раздела меню.
+        
+        Args:
+            choice: Выбор пользователя
+            
+        Returns:
+            True если нужно продолжить цикл, False если выход
+        """
+        if section := self.menu_structure.get(choice):
+            return self._section_navigation(section)
+        
+        if choice:
+            handle_invalid_choice()
+        
+        return True
+    
+    def _section_navigation(self, section: dict) -> bool:
+        """
+        Навигация внутри раздела меню.
+        
+        Args:
+            section: Данные раздела
+            
+        Returns:
+            True если нужно вернуться в главное меню
+        """
+        while True:
+            clear_screen()
+            scripts = section['scripts']
+            display_section_menu(section['title'], scripts)
+            
+            s_choice = get_user_choice("\nВыберите скрипт: ")
+            
+            if s_choice == "0":
+                return True  # Возврат в главное меню
+            
+            if script_data := scripts.get(s_choice):
+                script_name, _ = script_data
+                self._execute_script(script_name)
+                break
+        
+        return True
+    
+    def _execute_script(self, script_name: str) -> None:
+        """
+        Выполняет выбранный скрипт.
+        
+        Args:
+            script_name: Имя скрипта для выполнения
+        """
+        result = self.script_runner.run_script(script_name)
+        
+        if result is False:
+            # Ошибка выполнения
+            print("\nОшибка при выполнении скрипта. Подробности в логах.")
+        
+        self.script_runner.wait_for_return()
+    
+    def _shutdown(self) -> None:
+        """Корректное завершение программы."""
         clear_screen()
         print("Программа завершена.")
+        logger.info("Приложение завершено.")
+
+
+def main() -> None:
+    """Точка входа в приложение."""
+    app = Application()
+    app.run()
 
 
 if __name__ == "__main__":

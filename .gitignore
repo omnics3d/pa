@@ -13,3 +13,5 @@ pa2_4.py
 render_debug.log
 view/.chart_widget.py.swp
 view/.main_window.py.swp
+tasks/__pycache__/
+cli/__pycache__/
