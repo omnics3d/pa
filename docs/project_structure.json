@@ -1,0 +1,176 @@
+{
+  "project_root": "pa",
+  "structure": [
+    {
+      "type": "file",
+      "name": "main.py",
+      "description": "Точка входа для cli"
+    },
+    {
+      "type": "file",
+      "name": "main_v.py",
+      "description": "Точка входа для view"
+    },
+    {
+      "type": "file",
+      "name": "pyproject.toml"
+    },
+    {
+      "type": "directory",
+      "name": "core",
+      "description": "Общий «движок». «Тяжелые» системные вещи",
+      "children": [
+        {
+          "type": "file",
+          "name": "__init__.py"
+        },
+        {
+          "type": "file",
+          "name": "logger_v2026.py"
+        },
+        {
+          "type": "file",
+          "name": "data_loader.py"
+        },
+        {
+          "type": "file",
+          "name": "basic_parser.py"
+        },
+        {
+          "type": "file",
+          "name": "exchange_manager.py"
+        }
+      ]
+    },
+    {
+      "type": "directory",
+      "name": "tasks",
+      "description": "Папка с «отдельными скриптами»",
+      "children": [
+        {
+          "type": "file",
+          "name": "__init__.py"
+        },
+        {
+          "type": "directory",
+          "name": "statistics",
+          "description": "Папка со скриптами статистики",
+          "children": [
+            {
+              "type": "directory",
+              "name": "candlestick_trend_validator",
+              "children": [
+                {
+                  "type": "file",
+                  "name": "trend_validator.py"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "directory",
+      "name": "logs",
+      "description": "Файлы логов"
+    },
+    {
+      "type": "directory",
+      "name": "tests"
+    },
+    {
+      "type": "directory",
+      "name": "utils",
+      "children": [
+        {
+          "type": "file",
+          "name": "__init__.py"
+        }
+      ]
+    },
+    {
+      "type": "directory",
+      "name": "view",
+      "description": "Отображение результатов на свечном графике",
+      "children": [
+        {
+          "type": "file",
+          "name": "__init__.py"
+        },
+        {
+          "type": "file",
+          "name": "chart_widget.py"
+        },
+        {
+          "type": "file",
+          "name": "main_window.py"
+        },
+        {
+          "type": "file",
+          "name": "menu_manager.py"
+        },
+        {
+          "type": "file",
+          "name": "price_scale.py"
+        }
+      ]
+    },
+    {
+      "type": "directory",
+      "name": "cli",
+      "description": "Основные расчёты",
+      "children": [
+        {
+          "type": "file",
+          "name": "__init__.py"
+        },
+        {
+          "type": "file",
+          "name": "config.py"
+        },
+        {
+          "type": "file",
+          "name": "menu_manager.py"
+        },
+        {
+          "type": "file",
+          "name": "script_runner.py"
+        }
+      ]
+    },
+    {
+      "type": "directory",
+      "name": "storage",
+      "description": "Локальные данные (артефакты работы)",
+      "children": [
+        {
+          "type": "directory",
+          "name": "temp",
+          "description": "Временные файлы, которые удаляются после работы"
+        },
+        {
+          "type": "directory",
+          "name": "raw",
+          "description": "Исходные «грязные» данные, скачанные из интернета"
+        },
+        {
+          "type": "directory",
+          "name": "processed",
+          "description": "Обработанные файлы, готовые к выдаче"
+        },
+        {
+          "type": "directory",
+          "name": "state",
+          "description": "Файлы состояния (чтобы скрипт знал, где остановился)"
+        },
+        {
+          "type": "directory",
+          "name": "reports",
+          "description": "Финальные отчеты (артефакты для пользователя)"
+        }
+      ]
+    }
+  ]
+}
+

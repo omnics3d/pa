@@ -1,0 +1,8 @@
+Файл для элемента: candlestick_trend_validator
+Тип: Папка
+Полный путь: pa/tasks/statistics/candlestick_trend_validator
+Создан: 2026-01-19 17:25:47
+
+==================================================
+Родительские папки: tasks -> statistics
+Информация будет добавлена позже.

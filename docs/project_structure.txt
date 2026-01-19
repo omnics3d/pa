@@ -1,26 +1,33 @@
 pa/
-├── main.py                # Единая точка входа для машины
-├── pyproject.toml         # Зависимости (рекомендуется uv/poetry)
-├── .env                   # Настройки окружения (prod/stage) и                 
-│                          # конфиденциальных данных. 
+├── main.py                # Точка входа для cli
+├── main_v.py              # Точка входа для view
+├── pyproject.toml         # 
 ├── core/                  # Общий «движок». «Тяжелые» системные вещи
 │   ├── __init__.py
-│   ├── logger_v2026_2.py 
-│   ├── core/logger_v2026_2.py
-│   ├── config.py          # Валидация переменных окружения (Pydantic)
-│   └── db.py              # Общие подключения
-├── tasks/                 # Папка с вашими «отдельными скриптами»
-│   ├── statistics/        # Папка со скриптами статистики
-│   │   ├── trend_validator.py
+│   ├── logger_v2026.py
+│   ├── data_loader.py
+│   ├── basic_parser.py
+│   ├── exchange_manager.py
+├── tasks/                 # Папка с «отдельными скриптами»
 │   ├── __init__.py
-│   ├── base.py            # Базовый класс или интерфейс для всех задач
-│   ├── scraper_task.py    # Скрипт №1
-│   ├── report_task.py     # Скрипт №2
-│   └── cleanup_task.py    # Скрипт №3
-├── logs/                  # Куда пишутся файлы логов
+│   ├── statistics/        # Папка со скриптами статистики
+│   │   ├── candlestick_trend_validator/
+│   │       ├── trend_validator.py
+├── logs/                  # Файлы логов
 ├── tests/
-├── utils/                 # вспомогательные функции, которые не привязаны к
-│                          # бизнес-логике:
+├── utils/                 # 
+│   ├── __init__.py
+├── view/                  # Отображение результатов на свечном графике
+│   ├── __init__.py
+│   ├── chart_widget.py
+│   ├── main_window.py
+│   ├── menu_manager.py
+│   ├── price_scale.py
+├── cli/                   # Основные расчёты
+│   ├── __init__.py
+│   ├── config.py
+│   ├── menu_manager.py
+│   ├── script_runner.py
 └── storage/               # Локальные данные (артефакты работы)
     ├── temp/              # Временные файлы, которые удаляются после работы 
     ├── raw/               # Исходные «грязные» данные, скачанные из интернета
