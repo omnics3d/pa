@@ -1,8 +1,0 @@
-Файл для элемента: trend_validator.py
-Тип: Файл
-Полный путь: pa/tasks/statistics/candlestick_trend_validator/trend_validator.py
-Создан: 2026-01-19 17:25:47
-
-==================================================
-Родительские папки: tasks -> statistics -> candlestick_trend_validator
-Информация будет добавлена позже.

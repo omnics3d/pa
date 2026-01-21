@@ -4,21 +4,41 @@
     {
       "type": "file",
       "name": "main.py",
-      "description": "Точка входа для cli"
+      "description": ""
     },
     {
       "type": "file",
       "name": "main_v.py",
-      "description": "Точка входа для view"
+      "description": ""
     },
     {
       "type": "file",
       "name": "pyproject.toml"
     },
     {
+      "type": "file",
+      "name": "II.txt",
+      "description": ""
+    },
+    {
+      "type": "file",
+      "name": "clean_file.sh",
+      "description": ""
+    },
+    {
+      "type": "file",
+      "name": "start.sh",
+      "description": ""
+    },
+    {
+      "type": "file",
+      "name": "ubuntu-start.sh",
+      "description": ""
+    },
+    {
       "type": "directory",
       "name": "core",
-      "description": "Общий «движок». «Тяжелые» системные вещи",
+      "description": "",
       "children": [
         {
           "type": "file",
@@ -39,13 +59,41 @@
         {
           "type": "file",
           "name": "exchange_manager.py"
+        },
+        {
+          "type": "file",
+          "name": "version_bumper.py"
         }
       ]
     },
     {
       "type": "directory",
+      "name": "docs",
+      "description": "",
+      "children": [
+        {
+          "type": "file",
+          "name": "__init__.py"
+        },
+        {
+          "type": "file",
+          "name": "project_structure.json"
+        },
+        {
+          "type": "file",
+          "name": "project_structure.py"
+        }
+      ]
+    },
+    {
+      "type": "directory",
+      "name": "logs",
+      "description": ""
+    },
+    {
+      "type": "directory",
       "name": "tasks",
-      "description": "Папка с «отдельными скриптами»",
+      "description": "",
       "children": [
         {
           "type": "file",
@@ -54,7 +102,7 @@
         {
           "type": "directory",
           "name": "statistics",
-          "description": "Папка со скриптами статистики",
+          "description": "",
           "children": [
             {
               "type": "directory",
@@ -69,11 +117,6 @@
           ]
         }
       ]
-    },
-    {
-      "type": "directory",
-      "name": "logs",
-      "description": "Файлы логов"
     },
     {
       "type": "directory",
@@ -92,7 +135,7 @@
     {
       "type": "directory",
       "name": "view",
-      "description": "Отображение результатов на свечном графике",
+      "description": "",
       "children": [
         {
           "type": "file",
@@ -119,7 +162,7 @@
     {
       "type": "directory",
       "name": "cli",
-      "description": "Основные расчёты",
+      "description": "",
       "children": [
         {
           "type": "file",
@@ -142,32 +185,32 @@
     {
       "type": "directory",
       "name": "storage",
-      "description": "Локальные данные (артефакты работы)",
+      "description": "",
       "children": [
         {
           "type": "directory",
           "name": "temp",
-          "description": "Временные файлы, которые удаляются после работы"
+          "description": ""
         },
         {
           "type": "directory",
           "name": "raw",
-          "description": "Исходные «грязные» данные, скачанные из интернета"
+          "description": ""
         },
         {
           "type": "directory",
           "name": "processed",
-          "description": "Обработанные файлы, готовые к выдаче"
+          "description": ""
         },
         {
           "type": "directory",
           "name": "state",
-          "description": "Файлы состояния (чтобы скрипт знал, где остановился)"
+          "description": ""
         },
         {
           "type": "directory",
           "name": "reports",
-          "description": "Финальные отчеты (артефакты для пользователя)"
+          "description": ""
         }
       ]
     }

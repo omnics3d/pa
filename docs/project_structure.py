@@ -5,44 +5,11 @@ import time
 import json
 
 
-class MenuManager:
-    """Класс для управления меню выбора"""
-
-    def __init__(self, structure_viewer):
-        self.viewer = structure_viewer
-
-    def display_main_menu(self):
-        """Отображает главное меню"""
-        print("\nМеню выбора:")
-        print("1. Выбрать номер элемента (откроется .txt файл)")
-        print("2. Выход")
-
-    def handle_choice(self, choice):
-        """Обрабатывает выбор пользователя"""
-        if choice == "1":
-            self._handle_element_selection()
-            return True
-        elif choice == "2":
-            print("Выход из программы")
-            return False
-        else:
-            print("Ошибка: выберите 1 или 2")
-            return True
-
-    def _handle_element_selection(self):
-        """Обрабатывает выбор элемента по номеру"""
-        try:
-            prompt = f"Введите номер элемента (1-{self.viewer.total_elements}): "
-            num = int(input(prompt).strip())
-            self.viewer.open_txt_file(num)
-        except ValueError:
-            print("Ошибка: введите целое число")
-
-
 class ProjectStructureViewer:
     def __init__(self, json_file='docs/project_structure.json'):
         """Загружает структуру из JSON файла"""
         self.json_file = json_file
+        self.expanded_folders = set()  # Сет для хранения раскрытых папок
 
         try:
             with open(json_file, 'r', encoding='utf-8') as f:
@@ -61,7 +28,7 @@ class ProjectStructureViewer:
 
         self.elements = []
         self.numbered_lines = []
-        self._parse_structure(self.data['structure'])
+        self._parse_structure()
         self.total_elements = len(self.elements)
         self._check_and_create_txt_files()
 
@@ -117,55 +84,72 @@ class ProjectStructureViewer:
 
         time.sleep(1.5)
 
-    def _parse_structure(self, structure, level=0, prefix="", parent_folders=None):
-        """Рекурсивно парсит структуру и создает элементы для отображения"""
-        if parent_folders is None:
-            parent_folders = []
+    def _parse_structure(self):
+        """Парсит структуру с учетом раскрытых папок"""
+        self.elements = []
+        self.numbered_lines = []
+        self._parse_item(self.data['structure'], 0, [], [])
 
-        for item in structure:
+    def _parse_item(self, items, level, parent_folders, path_parts):
+        """Рекурсивно парсит элементы"""
+        for item in items:
             item_type = item.get('type', 'file')
             item_name = item.get('name', '')
             description = item.get('description', '')
-
+            
+            current_path = path_parts + [item_name]
+            path_key = '/'.join(current_path)
+            
+            # Проверяем, нужно ли показывать этот элемент
+            # Показываем если:
+            # 1. Это уровень 0
+            # 2. Все родительские папки раскрыты
+            should_show = True
+            for i in range(len(current_path) - 1):
+                parent_path = '/'.join(current_path[:i+1])
+                if parent_path not in self.expanded_folders:
+                    should_show = False
+                    break
+            
+            if not should_show:
+                continue
+            
+            # Формируем строку для отображения
             if level == 0:
                 if item_type == 'directory':
-                    line = f"{item_name}/"
+                    line = f"\033[94m{item_name}/\033[0m"  # Синий для папок
                 else:
                     line = item_name
-
-                if description:
-                    line += f"                # {description}"
             else:
                 indent = "│   " * (level - 1)
                 connector = "├── " if level > 0 else ""
-
+                
                 if item_type == 'directory':
-                    line = f"{indent}{connector}{item_name}/"
+                    line = f"{indent}{connector}\033[94m{item_name}/\033[0m"  # Синий для папок
                 else:
                     line = f"{indent}{connector}{item_name}"
-
-                if description:
-                    line += f"                # {description}"
-
+            
+            if description:
+                line += f"                # {description}"
+            
+            # Сохраняем информацию об элементе
             element_info = {
                 'name': item_name,
                 'type': item_type,
-                'full_path': f"{prefix}/{item_name}" if prefix else item_name,
                 'is_dir': item_type == 'directory',
                 'description': description,
                 'parent_folders': parent_folders.copy(),
-                'level': level
+                'level': level,
+                'path_key': path_key
             }
             self.elements.append(element_info)
             self.numbered_lines.append(line)
-
-            if 'children' in item and item['children']:
-                next_prefix = f"{prefix}/{item_name}" if prefix else item_name
+            
+            # Рекурсивно обрабатываем детей, если это папка
+            if 'children' in item and item['children'] and item_type == 'directory':
                 new_parent_folders = parent_folders.copy()
-                if item_type == 'directory':
-                    new_parent_folders.append(item_name.rstrip('/'))
-                self._parse_structure(item['children'], level + 1, 
-                                     next_prefix, new_parent_folders)
+                new_parent_folders.append(item_name.rstrip('/'))
+                self._parse_item(item['children'], level + 1, new_parent_folders, current_path)
 
     def _clear_screen(self):
         """Очищает экран консоли"""
@@ -182,16 +166,10 @@ class ProjectStructureViewer:
 
         print(f"Структура проекта ({self.project_root}/):")
         print(f"Загружено из: {self.json_file}")
-        print(f"Файлы .txt в: {self.txt_files_dir}")
         print("-" * 50)
 
         for i, line in enumerate(self.numbered_lines, 1):
             print(f"{i:2}. {line}")
-
-        print(f"\nВсего элементов: {self.total_elements}")
-        print("Все .txt файлы созданы и готовы к открытию.")
-        print("Имена файлов: [родительская_папка]_[имя_элемента].txt")
-        print("Редактор по умолчанию: Vim")
 
     def open_txt_file(self, element_number):
         """Открывает .txt файл в Vim для выбранного элемента"""
@@ -201,7 +179,26 @@ class ProjectStructureViewer:
             is_dir = element_info['is_dir']
             description = element_info['description']
             parent_folders = element_info['parent_folders']
+            path_key = element_info['path_key']
 
+            # Если это папка - раскрываем/скрываем её
+            if is_dir:
+                if path_key in self.expanded_folders:
+                    self.expanded_folders.remove(path_key)
+                    print(f"Папка '{element_name}' свернута")
+                else:
+                    self.expanded_folders.add(path_key)
+                    print(f"Папка '{element_name}' раскрыта")
+                
+                # Перерисовываем структуру
+                time.sleep(1)
+                self._parse_structure()
+                self.total_elements = len(self.elements)
+                self._clear_screen()
+                self._display_structure()
+                return
+
+            # Если это файл - открываем его
             if parent_folders:
                 last_parent = parent_folders[-1] if parent_folders else ""
                 clean_element_name = element_name.rstrip('/')
@@ -303,16 +300,24 @@ class ProjectStructureViewer:
         """Основной метод запуска программы"""
         self._clear_screen()
         self._display_structure()
-        menu = MenuManager(self)
-        running = True
-
-        while running:
-            menu.display_main_menu()
-            choice = input("Выберите действие (1 или 2): ").strip()
-            running = menu.handle_choice(choice)
+        
+        while True:
+            user_input = input("\nВведите номер файла (или q для выхода): ").strip().lower()
+            
+            if user_input == 'q':
+                print("Выход из программы")
+                break
+                
+            try:
+                element_number = int(user_input)
+                self.open_txt_file(element_number)
+            except ValueError:
+                print("Ошибка: введите целое число или q для выхода")
+                time.sleep(1)
+                self._clear_screen()
+                self._display_structure()
 
 
 if __name__ == "__main__":
     viewer = ProjectStructureViewer('docs/project_structure.json')
     viewer.run()
-
