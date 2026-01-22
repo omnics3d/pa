@@ -68,6 +68,18 @@
     },
     {
       "type": "directory",
+      "name": "lib",
+      "description": "",
+      "children": []
+    },
+    {
+      "type": "directory",
+      "name": "config",
+      "description": "",
+      "children": []
+    },
+    {
+      "type": "directory",
       "name": "docs",
       "description": "",
       "children": [
@@ -82,6 +94,10 @@
         {
           "type": "file",
           "name": "project_structure.py"
+        },
+        {
+          "type": "file",
+          "name": "project_structure.txt"
         }
       ]
     },
@@ -101,26 +117,48 @@
         },
         {
           "type": "directory",
-          "name": "statistics",
+          "name": "candlestick_trend_validator",
           "description": "",
           "children": [
             {
               "type": "directory",
-              "name": "candlestick_trend_validator",
+              "name": "statistics",
+              "description": "",
               "children": [
                 {
                   "type": "file",
                   "name": "trend_validator.py"
                 }
               ]
+            },
+            {
+              "type": "directory",
+              "name": "analytics",
+              "description": ""
+            },
+            {
+              "type": "directory",
+              "name": "strategies",
+              "description": ""
+            },
+            {
+              "type": "directory",
+              "name": "indicators",
+              "description": ""
+            },
+            {
+              "type": "directory",
+              "name": "documentation",
+              "description": ""
+            },
+            {
+              "type": "directory",
+              "name": "sundry",
+              "description": ""
             }
           ]
         }
       ]
-    },
-    {
-      "type": "directory",
-      "name": "tests"
     },
     {
       "type": "directory",
@@ -213,7 +251,17 @@
           "description": ""
         }
       ]
+    },
+    {
+      "type": "directory",
+      "name": ".dotfiles",
+      "description": "",
+      "children": [
+        {
+          "type": "file",
+          "name": ".vimrc"
+        }
+      ]
     }
   ]
 }
-
