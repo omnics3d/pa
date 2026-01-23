@@ -1,3 +1,4 @@
+# exchange_selection.py - исправленный импорт
 import sys
 import os
 import shutil
@@ -5,7 +6,12 @@ import shutil
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
 
-from exchange_config_loader import get_full_names_of_all_exchanges, get_full_names_of_all_markets, get_names_all_tools
+try:
+    # Пробуем импорт из lib
+    from lib.exchange_config_loader import get_full_names_of_all_exchanges, get_full_names_of_all_markets, get_names_all_tools
+except ImportError:
+    # Пробуем импорт напрямую
+    from exchange_config_loader import get_full_names_of_all_exchanges, get_full_names_of_all_markets, get_names_all_tools
 
 
 class ExchangeMenu:

@@ -5,13 +5,13 @@ import csv
 import sys
 from pathlib import Path
 
-project_root = str(Path(__file__).parent.parent)
+# Добавляем корень проекта в путь для импорта
+project_root = str(Path(__file__).parent.parent.parent.parent.parent)
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 from core.exchange_manager import ExchangeDataManager
 from core.logger_v2026 import setup_logging, get_logger
-from core.basic_parser import CLIParser
 
 logger = get_logger("trend_validator")
 
@@ -152,11 +152,11 @@ class TaskRunner:
         except Exception as e:
             logger.error(f"Ошибка в файле {path.name}: {e}")
 
-    def run_logic(self, args: any) -> None:
-        rep_dir = Path(f"storage/reports/{args.exchange}/{args.market}/{args.tool}")
+    def run_logic(self, exchange: str, market: str, tool: str) -> None:
+        rep_dir = Path(f"storage/reports/{exchange}/{market}/{tool}")
         rep_file = rep_dir / "script_1_report.csv"
         if rep_file.exists(): rep_file.unlink()
-        data_dir = Path(f"data/{args.exchange}/{args.market}/{args.tool}/tf_base")
+        data_dir = Path(f"data/{exchange}/{market}/{tool}/tf_base")
         if not data_dir.exists(): return
         idx = 5
         while (f_path := data_dir / f"{idx}.csv").exists():
@@ -170,10 +170,37 @@ def run():
         xml_path = base_path / "config" / "exchanges_config.xml"
         
         manager = ExchangeDataManager(str(xml_path))
-        parser = CLIParser(manager)
-        args = parser.parse()
+        
+        # Используем ExchangeMenu для выбора
+        # Добавляем путь к корню проекта в sys.path для импорта из lib
+        root_path = Path(__file__).parent.parent.parent.parent
+        if str(root_path) not in sys.path:
+            sys.path.insert(0, str(root_path))
+        
+        try:
+            from lib.exchange_selection import ExchangeMenu
+        except ImportError:
+            # Попробуем прямой импорт
+            from exchange_selection import ExchangeMenu
+        
+        menu = ExchangeMenu()
+        selection_result = menu.display_exchanges()
+        
+        if selection_result is None:
+            print("\nВыбор отменен")
+            return
+        
+        exchange = selection_result["exchange"]
+        market = selection_result["market"]
+        tool = selection_result["tool"]
+        
+        logger.info(f"Выбрано: Биржа={exchange}, Рынок={market}, Инструмент={tool}")
+        
         runner = TaskRunner(manager)
-        runner.run_logic(args)
+        runner.run_logic(exchange, market, tool)
+        
+        print(f"\nОбработка завершена для: {exchange}/{market}/{tool}")
+        
     except Exception as e:
         logger.critical(f"Ошибка запуска: {e}", exc_info=True)
 
