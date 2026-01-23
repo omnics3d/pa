@@ -70,7 +70,16 @@
       "type": "directory",
       "name": "lib",
       "description": "",
-      "children": []
+      "children": [
+          {
+          "type": "file",
+          "name": "exchange_config_loader.py"
+        },
+        {
+          "type": "file",
+          "name": "exchange_selection.py"
+        }
+      ]
     },
     {
       "type": "directory",

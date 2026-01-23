@@ -5,12 +5,29 @@
       "title": "ИДЕЯ",
       "scripts": {
         "1": {
-          "description": "Скрипты"
+          "description": "Валидатор тренда на основе свечных графиков",
+          "scripts": {
+            "1": {
+              "description": "СТАТИСТИКА",
+              "scripts": {
+                "1": {
+                  "module_path": "tasks.candlestick_trend_validator.statistics.trend_validator",
+                  "description": "Trend Validator (Анализ свечей)"
+                }
+              }
+            },
+            "2": {
+              "description": "АНЛИТИКА"
+            }
+          }
         },
         "2": {
-          "description": "Описание"
+          "description": "Скрипты"
         },
         "3": {
+          "description": "Описание"
+        },
+        "4": {
           "description": "Результат",
           "scripts": {
             "1": {
@@ -22,16 +39,15 @@
       }
     },
     "2": {
-      "title": "СТАТИСТИКА",
-      "scripts": {
-        "1": {
-          "module_path": "tasks.candlestick_trend_validator.statistics.trend_validator",
-          "description": "Trend Validator (Анализ свечей)"
-        }
-      }
+      "title": "ИНДИКАТОРЫ",
+      "scripts": {}
     },
     "3": {
-      "title": "АНАЛИТИКА",
+      "title": "ЗАГРУЗКИ",
+      "scripts": {}
+    },
+    "4": {
+      "title": "УТИЛИТЫ",
       "scripts": {}
     }
   }

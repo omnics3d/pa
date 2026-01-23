@@ -4,6 +4,9 @@
 Точка входа в приложение.
 """
 
+import os
+import shutil
+
 # Абсолютные импорты (явные, без реэкспорта)
 from core.logger_v2026 import setup_logging, get_logger
 
@@ -27,6 +30,60 @@ setup_logging(
 )
 
 logger = get_logger("MainManager")
+
+
+def display_menu_at_bottom(menu_title, menu_items, is_main_section=False):
+    """Отображает меню в нижней части экрана с позиционированием курсора."""
+    # Получаем текущий размер терминала
+    terminal_size = shutil.get_terminal_size()
+    terminal_height = terminal_size.lines
+    
+    # Очищаем экран
+    clear_screen()
+    
+    # Рассчитываем позицию для меню
+    # Количество строк, которое займет меню
+    menu_lines_count = 2 + len(menu_items) + 1  # заголовок + пункты + "0. Назад"
+    
+    # Начинаем отображение меню за (menu_lines_count) строк от низа
+    # (без дополнительной строки для ввода)
+    menu_start_line = terminal_height - menu_lines_count
+    
+    # Перемещаем курсор в начало позиции меню
+    print(f"\033[{menu_start_line};0H", end="")
+    
+    # Отображаем меню
+    print(f" --- {menu_title} ---")
+    
+    if is_main_section:
+        # Для главного меню (разделы)
+        for key, item in menu_items.items():
+            print(f" {key}. {item['description']}")
+    else:
+        # Для подменю (скрипты)
+        for key, item in menu_items.items():
+            print(f" {key}. {item['description']}")
+    
+    print(" 0. Назад")
+    
+    # Перемещаем курсор на строку ввода (сразу под меню)
+    print(f"\033[{terminal_height};0H", end="")
+
+
+def get_user_choice_bottom(prompt):
+    """Получает выбор пользователя с позиционированием внизу."""
+    # Получаем размер терминала
+    terminal_size = shutil.get_terminal_size()
+    terminal_height = terminal_size.lines
+    
+    # Перемещаем курсор вниз и выводим prompt
+    print(f"\033[{terminal_height - 1};0H", end="")
+    choice = input(f" {prompt} ")
+    
+    # Возвращаем курсор на последнюю строку
+    print(f"\033[{terminal_height};0H", end="")
+    
+    return choice.strip()
 
 
 class Application:
@@ -56,10 +113,14 @@ class Application:
     def _main_loop(self) -> None:
         """Основной цикл навигации."""
         while True:
-            clear_screen()
-            display_main_menu()
+            # Главное меню - отображаем разделы внизу
+            display_menu_at_bottom(
+                "Главное меню",
+                {key: {"description": section['title']} for key, section in self.menu_structure.items()},
+                is_main_section=True
+            )
             
-            choice = get_user_choice("\nВыберите раздел: ")
+            choice = get_user_choice_bottom("Выберите раздел:")
             
             if choice == "0":
                 logger.info("Пользователь инициировал выход.")
@@ -79,92 +140,65 @@ class Application:
             True если нужно продолжить цикл, False если выход
         """
         if section := self.menu_structure.get(choice):
-            return self._section_navigation(section)
+            # Для раздела передаем его скрипты и путь
+            return self._navigate_menu(section, section['title'])
         
         if choice:
             handle_invalid_choice()
         
         return True
     
-    def _section_navigation(self, section: dict) -> bool:
+    def _navigate_menu(self, menu_data: dict, menu_path: str) -> bool:
         """
-        Навигация внутри раздела меню.
+        Рекурсивная навигация по меню любой вложенности.
         
         Args:
-            section: Данные раздела
+            menu_data: Данные меню
+            menu_path: Текущий путь меню для отображения
             
         Returns:
-            True если нужно вернуться в главное меню
+            True если нужно вернуться в главное меню, False если на уровень выше
         """
         while True:
-            clear_screen()
-            scripts = section['scripts']
-            display_section_menu(section['title'], scripts)
+            # Отображаем меню внизу экрана
+            scripts = menu_data.get('scripts', {})
+            display_menu_at_bottom(menu_path, scripts)
             
-            s_choice = get_user_choice("\nВыберите пункт: ")
+            s_choice = get_user_choice_bottom("Выберите пункт:")
             
             if s_choice == "0":
-                return True  # Возврат в главное меню
+                return True  # Возврат в предыдущее меню
             
             if script_data := scripts.get(s_choice):
-                # ПРОВЕРЯЕМ: если у этого пункта есть свои скрипты, это подменю
+                # Проверяем, есть ли вложенные скрипты
                 if 'scripts' in script_data and script_data['scripts']:
-                    # Это подменю - рекурсивно заходим в него
-                    if not self._handle_submenu(script_data, section['title']):
-                        continue  # Продолжаем в этом же разделе
-                    else:
-                        break  # Возвращаемся в главное меню
-                else:
-                    # Это обычный скрипт
-                    module_path = script_data.get('module_path')
+                    # Рекурсивный вход в подменю
+                    new_menu_path = f"{menu_path} → {script_data['description']}"
+                    should_return_to_main = self._navigate_menu(script_data, new_menu_path)
                     
-                    if module_path:
-                        self._execute_script(module_path)
+                    if should_return_to_main:
+                        # Если вернулись из подменю, продолжаем в текущем
+                        continue
                     else:
-                        # Для пунктов без module_path просто возвращаемся
-                        print(f"\nПункт '{script_data.get('description', 'Unknown')}' не содержит исполняемого скрипта.")
-                        input("Нажмите Enter для продолжения...")
-                    
-                    # После выполнения скрипта остаемся в этом же меню
-                    continue
-        
-        return True
-    
-    def _handle_submenu(self, submenu_data: dict, parent_title: str) -> bool:
-        """
-        Обработка подменю.
-        
-        Args:
-            submenu_data: Данные подменю
-            parent_title: Название родительского меню
-            
-        Returns:
-            True если нужно вернуться в главное меню, False если в родительское
-        """
-        while True:
-            clear_screen()
-            print(f"--- {parent_title} → {submenu_data['description']} ---")
-            
-            scripts = submenu_data['scripts']
-            for key, script in scripts.items():
-                print(f"{key}. {script['description']}")
-            print("0. Назад")
-            
-            s_choice = get_user_choice("\nВыберите пункт: ")
-            
-            if s_choice == "0":
-                return False  # Возврат в родительское меню (не в главное!)
-            
-            if script_data := scripts.get(s_choice):
+                        return False  # Возврат на уровень выше
+                
+                # Это конечный пункт с module_path
                 module_path = script_data.get('module_path')
                 
                 if module_path:
                     self._execute_script(module_path)
                 else:
-                    print(f"\nПункт '{script_data.get('description', 'Unknown')}' не содержит исполняемого скрипта.")
-                    input("Нажмите Enter для продолжения...")
+                    # Получаем размер терминала для позиционирования
+                    terminal_size = shutil.get_terminal_size()
+                    terminal_height = terminal_size.lines
+                    
+                    # Перемещаем курсор вниз для сообщения
+                    print(f"\033[{terminal_height - 2};0H", end="")
+                    print(f" Пункт '{script_data.get('description', 'Unknown')}' не содержит исполняемого скрипта.")
+                    print(f"\033[{terminal_height - 1};0H", end="")
+                    input(" Нажмите Enter для продолжения...")
                 
-                # После выполнения скрипта остаемся в этом же подменю
+                # После выполнения остаемся в текущем меню
                 continue
         
         return True
@@ -180,14 +214,20 @@ class Application:
         
         if result is False:
             # Ошибка выполнения
-            print("\nОшибка при выполнении скрипта. Подробности в логах.")
+            # Получаем размер терминала
+            terminal_size = shutil.get_terminal_size()
+            terminal_height = terminal_size.lines
+            
+            print(f"\033[{terminal_height - 2};0H", end="")
+            print(" Ошибка при выполнении скрипта. Подробности в логах.")
+            print(f"\033[{terminal_height - 1};0H", end="")
         
         self.script_runner.wait_for_return()
     
     def _shutdown(self) -> None:
         """Корректное завершение программы."""
         clear_screen()
-        print("Программа завершена.")
+        print(" Программа завершена.")
         logger.info("Приложение завершено.")
 
 
