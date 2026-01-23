@@ -1,3 +1,4 @@
+# main.py
 """
 Главный управляющий скрипт программы.
 Точка входа в приложение.
@@ -7,7 +8,7 @@
 from core.logger_v2026 import setup_logging, get_logger
 
 # Импорты из cli с явным указанием модулей
-from cli.config import SCRIPTS_DIR, MENU_STRUCTURE
+from cli.config_menu import SCRIPTS_DIR, MENU_STRUCTURE
 from cli.menu_manager import (
     clear_screen, 
     display_main_menu, 
@@ -36,7 +37,7 @@ class Application:
     
     def __init__(self):
         """Инициализация приложения."""
-        self.script_runner = ScriptRunner(SCRIPTS_DIR)
+        self.script_runner = ScriptRunner()
         self.menu_structure = MENU_STRUCTURE
     
     def run(self) -> None:
@@ -56,7 +57,7 @@ class Application:
         """Основной цикл навигации."""
         while True:
             clear_screen()
-            display_main_menu(self.menu_structure)
+            display_main_menu()
             
             choice = get_user_choice("\nВыберите раздел: ")
             
@@ -100,26 +101,82 @@ class Application:
             scripts = section['scripts']
             display_section_menu(section['title'], scripts)
             
-            s_choice = get_user_choice("\nВыберите скрипт: ")
+            s_choice = get_user_choice("\nВыберите пункт: ")
             
             if s_choice == "0":
                 return True  # Возврат в главное меню
             
             if script_data := scripts.get(s_choice):
-                script_name, _ = script_data
-                self._execute_script(script_name)
-                break
+                # ПРОВЕРЯЕМ: если у этого пункта есть свои скрипты, это подменю
+                if 'scripts' in script_data and script_data['scripts']:
+                    # Это подменю - рекурсивно заходим в него
+                    if not self._handle_submenu(script_data, section['title']):
+                        continue  # Продолжаем в этом же разделе
+                    else:
+                        break  # Возвращаемся в главное меню
+                else:
+                    # Это обычный скрипт
+                    module_path = script_data.get('module_path')
+                    
+                    if module_path:
+                        self._execute_script(module_path)
+                    else:
+                        # Для пунктов без module_path просто возвращаемся
+                        print(f"\nПункт '{script_data.get('description', 'Unknown')}' не содержит исполняемого скрипта.")
+                        input("Нажмите Enter для продолжения...")
+                    
+                    # После выполнения скрипта остаемся в этом же меню
+                    continue
         
         return True
     
-    def _execute_script(self, script_name: str) -> None:
+    def _handle_submenu(self, submenu_data: dict, parent_title: str) -> bool:
+        """
+        Обработка подменю.
+        
+        Args:
+            submenu_data: Данные подменю
+            parent_title: Название родительского меню
+            
+        Returns:
+            True если нужно вернуться в главное меню, False если в родительское
+        """
+        while True:
+            clear_screen()
+            print(f"--- {parent_title} → {submenu_data['description']} ---")
+            
+            scripts = submenu_data['scripts']
+            for key, script in scripts.items():
+                print(f"{key}. {script['description']}")
+            print("0. Назад")
+            
+            s_choice = get_user_choice("\nВыберите пункт: ")
+            
+            if s_choice == "0":
+                return False  # Возврат в родительское меню (не в главное!)
+            
+            if script_data := scripts.get(s_choice):
+                module_path = script_data.get('module_path')
+                
+                if module_path:
+                    self._execute_script(module_path)
+                else:
+                    print(f"\nПункт '{script_data.get('description', 'Unknown')}' не содержит исполняемого скрипта.")
+                    input("Нажмите Enter для продолжения...")
+                
+                # После выполнения скрипта остаемся в этом же подменю
+                continue
+        
+        return True
+    
+    def _execute_script(self, module_path: str) -> None:
         """
         Выполняет выбранный скрипт.
         
         Args:
-            script_name: Имя скрипта для выполнения
+            module_path: Полный путь к модулю (например, "tasks.trend_validator")
         """
-        result = self.script_runner.run_script(script_name)
+        result = self.script_runner.run_script(module_path)
         
         if result is False:
             # Ошибка выполнения
@@ -142,4 +199,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -1,0 +1,38 @@
+{
+  "SCRIPTS_DIR": "tasks",
+  "MENU_STRUCTURE": {
+    "1": {
+      "title": "ИДЕЯ",
+      "scripts": {
+        "1": {
+          "description": "Скрипты"
+        },
+        "2": {
+          "description": "Описание"
+        },
+        "3": {
+          "description": "Результат",
+          "scripts": {
+            "1": {
+              "description": "Биржа",
+              "module_path": "lib.exchange_selection"
+            }
+          }
+        }
+      }
+    },
+    "2": {
+      "title": "СТАТИСТИКА",
+      "scripts": {
+        "1": {
+          "module_path": "tasks.candlestick_trend_validator.statistics.trend_validator",
+          "description": "Trend Validator (Анализ свечей)"
+        }
+      }
+    },
+    "3": {
+      "title": "АНАЛИТИКА",
+      "scripts": {}
+    }
+  }
+}

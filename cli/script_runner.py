@@ -1,3 +1,4 @@
+# script_runner.py
 """
 Модуль для динамической загрузки и выполнения скриптов.
 """
@@ -18,29 +19,25 @@ class ScriptRunner:
     Поддерживает динамическую загрузку и горячую перезагрузку модулей.
     """
     
-    def __init__(self, scripts_dir: str = "tasks"):
+    def __init__(self):
         """
         Инициализация раннера скриптов.
-        
-        Args:
-            scripts_dir: Директория с модулями-скриптами
+        Теперь путь к модулю передается напрямую при запуске скрипта.
         """
-        self.scripts_dir = scripts_dir
         self._module_cache = {}
     
-    def run_script(self, script_name: str) -> Optional[bool]:
+    def run_script(self, module_path: str) -> Optional[bool]:
         """
         Динамически импортирует и запускает функцию run() модуля.
         
         Args:
-            script_name: Имя модуля (без .py)
+            module_path: Полный путь к модулю (например, "tasks.trend_validator")
             
         Returns:
             True если скрипт выполнен успешно, False при ошибке, 
             None если функция run не найдена
         """
         clear_screen()
-        module_path = f"{self.scripts_dir}.{script_name}"
         
         try:
             logger.info("Запуск модуля: %s", module_path)
@@ -52,12 +49,12 @@ class ScriptRunner:
             return self._execute_run_function(module, module_path)
             
         except ImportError as e:
-            logger.error("Модуль не найден: %s. Ошибка: %s", script_name, e)
+            logger.error("Модуль не найден: %s. Ошибка: %s", module_path, e)
             return False
         except Exception as e:
             logger.critical(
                 "Критическая ошибка в %s: %s", 
-                script_name, e, 
+                module_path, e, 
                 exc_info=True
             )
             return False
@@ -115,4 +112,3 @@ class ScriptRunner:
         """
         print(f"\n{'-' * 40}")
         input("Нажмите Enter для возврата в меню...")
-

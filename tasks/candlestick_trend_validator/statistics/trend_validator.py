@@ -1,3 +1,4 @@
+# trend_validator.py (исправленная функция run())
 from __future__ import annotations
 
 import csv
@@ -164,8 +165,10 @@ class TaskRunner:
 
 def run():
     try:
-        base_path = Path(__file__).parent.parent
-        xml_path = base_path / "storage" / "state" / "exchanges_config.xml"
+        # Поднимаемся до корня проекта (папка pa/)
+        base_path = Path(__file__).parent.parent.parent.parent
+        xml_path = base_path / "config" / "exchanges_config.xml"
+        
         manager = ExchangeDataManager(str(xml_path))
         parser = CLIParser(manager)
         args = parser.parse()
@@ -176,4 +179,3 @@ def run():
 
 if __name__ == "__main__":
     run()
-

@@ -1,0 +1,70 @@
+{
+  "exchanges": {
+    "exchange": {
+      "parameters": {
+        "full_name": "bybit",
+        "short_name": "bb",
+        "rus_name": "байбит",
+        "path_load": "https://api.bybit.com/v5/market/kline"
+      },
+      "markets": {
+        "market": [
+          {
+            "parameters": {
+              "full_name": "linear",
+              "short_name": "ft",
+              "rus_name": "фьючерс"
+            },
+            "tools": {
+              "tool": [
+                {
+                  "name": "DOGEUSDT",
+                  "parameters": {},
+                  "load_date": {
+                    "start_load": "2021-08-30",
+                    "end_load": "2025-10-12"
+                  }
+                },
+                {
+                  "name": "ADAUSDT",
+                  "parameters": {},
+                  "load_date": {
+                    "start_load": "2021-10-21",
+                    "end_load": "2021-10-18"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "parameters": {
+              "full_name": "spot",
+              "short_name": "sp",
+              "rus_name": "спот"
+            },
+            "tools": {
+              "tool": [
+                {
+                  "name": "DOGEUSDT",
+                  "parameters": {},
+                  "load_date": {
+                    "start_load": "2021-09-01",
+                    "end_load": "2025-10-07"
+                  }
+                },
+                {
+                  "name": "ADAUSDT",
+                  "parameters": {},
+                  "load_date": {
+                    "start_load": "2021-10-21",
+                    "end_load": "2021-10-20"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

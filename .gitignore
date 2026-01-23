@@ -16,4 +16,6 @@ view/.main_window.py.swp
 tasks/__pycache__/
 cli/__pycache__/
 docs/project_structure/
+lib/__pycache__/
+tasks/candlestick_trend_validator/statistics/__pycache__/
 
