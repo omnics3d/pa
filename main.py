@@ -140,6 +140,12 @@ class Application:
             True если нужно продолжить цикл, False если выход
         """
         if section := self.menu_structure.get(choice):
+            # Проверяем, есть ли module_path для прямого запуска
+            if 'module_path' in section and not section.get('scripts'):
+                # Прямой запуск скрипта
+                self._execute_script(section['module_path'])
+                return True  # Возврат в главное меню
+            
             # Для раздела передаем его скрипты и путь
             return self._navigate_menu(section, section['title'])
         
@@ -162,6 +168,13 @@ class Application:
         while True:
             # Отображаем меню внизу экрана
             scripts = menu_data.get('scripts', {})
+            
+            # Проверяем, есть ли module_path для прямого запуска (если scripts пуст)
+            if not scripts and 'module_path' in menu_data:
+                # Прямой запуск скрипта
+                self._execute_script(menu_data['module_path'])
+                return True  # Возврат в главное меню
+            
             display_menu_at_bottom(menu_path, scripts)
             
             s_choice = get_user_choice_bottom("Выберите пункт:")

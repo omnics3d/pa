@@ -18,4 +18,5 @@ cli/__pycache__/
 docs/project_structure/
 lib/__pycache__/
 tasks/candlestick_trend_validator/statistics/__pycache__/
-
+loader/__pycache__/
+storage/

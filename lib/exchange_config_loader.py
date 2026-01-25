@@ -161,7 +161,7 @@ def save_end_date_load(exchange: str, market: str, tool: str, date: str):
         tool_data['load_date']['end_load'] = date
         
         # Сохраняем обновленные данные
-        with open('exchanges_config.json', 'w', encoding='utf-8') as f:
+        with open('config/exchanges_config.json', 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
 def _load_json_data() -> dict:

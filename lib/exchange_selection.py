@@ -151,10 +151,17 @@ class ExchangeMenu:
             return self.display_tools(exchange, market)
 
 
-if __name__ == "__main__":
+def run():
+    """Запуск меню выбора бирж, рынков и инструментов."""
     menu = ExchangeMenu()
     result = menu.display_exchanges()
     if result is None:
         print("\nВыбор отменен")
+        return None
     else:
         print(f"\nВыбран: {result}")
+        return result
+
+
+if __name__ == "__main__":
+    run()
