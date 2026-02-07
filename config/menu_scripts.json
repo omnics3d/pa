@@ -52,6 +52,10 @@
         "1": {
           "description": "Проверка целостности данных",
           "module_path": "utils.data_integrity_checker"
+        },
+        "2": {
+          "description": "Сборка таймфреймов",
+          "module_path": "utils.timeframe_creator"
         }
       }
     }

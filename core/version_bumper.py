@@ -20,7 +20,7 @@ try:
     from logger_v2026 import get_logger, setup_logging
 except ImportError:
     # На случай запуска из корня как модуля
-    from core.logger_v2026 import get_logger, setup_logging	
+    from core.logger_v2026 import get_logger, setup_logging
 
     def get_logger(name: str) -> logging.Logger:
         """Возвращает стандартный логгер при отсутствии core."""
@@ -30,11 +30,12 @@ except ImportError:
         """Настраивает базовое логирование при отсутствии core."""
         logging.basicConfig(level=logging.INFO)
 
+
 # Инициализация констант
 VERSION_PATTERN: Final[str] = (
     r'(?P<pre>version\s*=\s*")'
-    r'(?P<base>\d+\.\d+\.\d+\.)'
-    r'(?P<build>\d+)'
+    r"(?P<base>\d+\.\d+\.\d+\.)"
+    r"(?P<build>\d+)"
     r'(?P<suf>")'
 )
 
@@ -138,4 +139,3 @@ if __name__ == "__main__":
 
     if not increment_build_number():
         sys.exit(1)
-

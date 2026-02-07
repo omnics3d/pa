@@ -3,6 +3,7 @@
 Модуль управления консольным меню.
 Отвечает за отображение и навигацию по меню.
 """
+
 import os
 import shutil
 import sys
@@ -21,13 +22,13 @@ def clear_screen() -> None:
     Очищает консоль терминала.
     Кросс-платформенная реализация.
     """
-    os.system('cls' if os.name == 'nt' else 'clear')
+    os.system("cls" if os.name == "nt" else "clear")
 
 
 def move_cursor_to_bottom(menu_height: int) -> None:
     """
     Смещает курсор и отображение меню к нижней части экрана.
-    
+
     Args:
         menu_height: Высота меню в строках
     """
@@ -46,7 +47,7 @@ def display_main_menu() -> None:
     """
     menu_height = len(MENU_STRUCTURE) + 6
     move_cursor_to_bottom(menu_height)
-    
+
     print("--- ГЛАВНОЕ МЕНЮ (2026.2) ---")
     for key, section in MENU_STRUCTURE.items():
         print(f"{key}. Раздел: {section['title']}")
@@ -54,19 +55,18 @@ def display_main_menu() -> None:
 
 
 def display_section_menu(
-    section_title: str, 
-    scripts: Dict[str, Dict[str, str]]
+    section_title: str, scripts: Dict[str, Dict[str, str]]
 ) -> None:
     """
     Отображает меню раздела со скриптами.
-    
+
     Args:
         section_title: Название раздела
         scripts: Словарь скриптов {key: {module_path: str, description: str}}
     """
     sub_menu_h = len(scripts) + 6
     move_cursor_to_bottom(sub_menu_h)
-    
+
     print(f"--- РАЗДЕЛ: {section_title} ---")
     for s_key, script_info in scripts.items():
         print(f"{s_key}. {script_info['description']}")
@@ -76,10 +76,10 @@ def display_section_menu(
 def get_user_choice(prompt: str = "\nВыберите пункт: ") -> str:
     """
     Получает выбор пользователя с базовой валидацией.
-    
+
     Args:
         prompt: Приглашение для ввода
-        
+
     Returns:
         Очищенная строка выбора пользователя
     """

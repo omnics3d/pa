@@ -2,6 +2,7 @@
 """
 Конфигурация меню приложения.
 """
+
 from typing import Final, Any
 import json
 import os
@@ -13,12 +14,12 @@ MENU_CONFIG_PATH: Final[str] = os.path.join("config", "menu_scripts.json")
 def load_menu_config() -> dict[str, Any]:
     """
     Загружает конфигурацию меню и скриптов из JSON файла.
-    
+
     Returns:
         Словарь с конфигурацией меню и скриптов
     """
     try:
-        with open(MENU_CONFIG_PATH, 'r', encoding='utf-8') as f:
+        with open(MENU_CONFIG_PATH, "r", encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
         print(f"Ошибка: Файл конфигурации меню не найден: {MENU_CONFIG_PATH}")

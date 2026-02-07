@@ -128,22 +128,22 @@ def bump_build_number(version_str: str) -> str:
         10. Собрать новую строку версии: main_part + '-' + str(build)
         11. Вернуть новую строку версии
     """
-    version_str = version_str.lstrip('vV').strip()
+    version_str = version_str.lstrip("vV").strip()
 
-    if '-' not in version_str:
+    if "-" not in version_str:
         raise ValueError(
             f"Версия должна быть в формате MAJOR.MINOR.PATCH-BUILD: {version_str}"
         )
 
-    main_part, build_part = version_str.split('-', 1)
-    build_part = build_part.split('+')[0]
+    main_part, build_part = version_str.split("-", 1)
+    build_part = build_part.split("+")[0]
 
     try:
         build = int(build_part)
     except ValueError:
         raise ValueError(f"Билд-номер должен быть целым числом: {build_part}")
 
-    main_parts = main_part.split('.')
+    main_parts = main_part.split(".")
     if len(main_parts) != 3:
         raise ValueError(
             f"Основная часть версии должна содержать 3 компонента: {main_part}"
@@ -159,7 +159,9 @@ def bump_build_number(version_str: str) -> str:
     return f"{main_part}-{build + 1}"
 
 
-def read_and_bump_version(pyproject_path: Path) -> Tuple[str, str, tomlkit.TOMLDocument]:
+def read_and_bump_version(
+    pyproject_path: Path,
+) -> Tuple[str, str, tomlkit.TOMLDocument]:
     """
     Читает версию из pyproject.toml и увеличивает билд-номер.
 
@@ -226,17 +228,17 @@ def read_and_bump_version(pyproject_path: Path) -> Tuple[str, str, tomlkit.TOMLD
         raise ValueError(f"Файл не найден: {pyproject_path}")
 
     try:
-        with open(pyproject_path, 'r', encoding='utf-8') as f:
+        with open(pyproject_path, "r", encoding="utf-8") as f:
             content = f.read()
             doc = tomlkit.parse(content)
 
-        if 'project' not in doc:
+        if "project" not in doc:
             raise ValueError("Раздел [project] не найден в pyproject.toml")
 
-        if 'version' not in doc['project']:
+        if "version" not in doc["project"]:
             raise ValueError("Поле 'version' не найдено в разделе [project]")
 
-        old_version = str(doc['project']['version'])
+        old_version = str(doc["project"]["version"])
         new_version = bump_build_number(old_version)
 
         return old_version, new_version, doc
@@ -246,9 +248,7 @@ def read_and_bump_version(pyproject_path: Path) -> Tuple[str, str, tomlkit.TOMLD
 
 
 def write_pyproject_version(
-    pyproject_path: Path,
-    new_version: str,
-    doc: tomlkit.TOMLDocument
+    pyproject_path: Path, new_version: str, doc: tomlkit.TOMLDocument
 ) -> bool:
     """
     Записывает обновленную версию в файл pyproject.toml.
@@ -300,9 +300,9 @@ def write_pyproject_version(
            - Вернуть False
     """
     try:
-        doc['project']['version'] = new_version
+        doc["project"]["version"] = new_version
 
-        with open(pyproject_path, 'w', encoding='utf-8') as f:
+        with open(pyproject_path, "w", encoding="utf-8") as f:
             f.write(tomlkit.dumps(doc))
         return True
 
@@ -362,10 +362,7 @@ def git_add_file(file_path: Path) -> bool:
     """
     try:
         result = subprocess.run(
-            ['git', 'add', str(file_path)],
-            check=True,
-            capture_output=True,
-            text=True
+            ["git", "add", str(file_path)], check=True, capture_output=True, text=True
         )
         return True
     except subprocess.CalledProcessError as e:
@@ -425,7 +422,7 @@ def main() -> int:
            - Вывести сообщение об ошибке
            - Вернуть 1
     """
-    pyproject_path = Path('pyproject.toml')
+    pyproject_path = Path("pyproject.toml")
 
     if not pyproject_path.exists():
         print(f"Файл {pyproject_path} не найден")
@@ -455,5 +452,5 @@ def main() -> int:
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     exit(main())

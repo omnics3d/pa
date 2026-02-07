@@ -4,6 +4,7 @@ import importlib.util
 import shutil
 from PySide6.QtWidgets import QApplication
 
+
 def check_x11():
     """Проверка DISPLAY из .bashrc для работы в Termux X11"""
     display = os.environ.get("DISPLAY")
@@ -12,6 +13,7 @@ def check_x11():
         return False
     print(f"[*] X11 OK: DISPLAY={display}")
     return True
+
 
 def clear_cache():
     """Очистка кэша Python для чистого запуска модулей в 2026"""
@@ -22,16 +24,18 @@ def clear_cache():
             shutil.rmtree(pycache)
             print(f"  [+] Очищен кэш: {folder}")
 
+
 def load_module_from_file(module_name, file_path):
     """Загрузка модуля напрямую из локального файла"""
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Файл {file_path} отсутствует!")
-    
+
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
+
 
 def main():
     # Установка рабочей директории
@@ -49,7 +53,7 @@ def main():
 
     # Инициализация Qt
     app = QApplication(sys.argv)
-    app.setStyle("Fusion") 
+    app.setStyle("Fusion")
     app.setApplicationName("Termux_FinChart_2026")
 
     # 1. Загрузка логгера (из папки core)
@@ -63,21 +67,23 @@ def main():
 
     # 2. Загрузка основного окна из новой папки view
     try:
-        main_window_module = load_module_from_file("view.main_window", "view/main_window.py")
-        
+        main_window_module = load_module_from_file(
+            "view.main_window", "view/main_window.py"
+        )
+
         global win
         win = main_window_module.MainWindow()
         win.show()
-        
+
         print("[*] GUI успешно выведен на рабочий стол из папки view/.")
         sys.exit(app.exec())
     except Exception as e:
         # Теперь логгер (если загрузился) запишет ошибку, либо выведем в консоль
         error_msg = f"[-] Критическая ошибка при открытии окна: {e}"
         print(error_msg)
-        if 'log' in locals():
+        if "log" in locals():
             log.error(error_msg)
+
 
 if __name__ == "__main__":
     main()
-
