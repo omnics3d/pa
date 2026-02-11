@@ -13,6 +13,10 @@
                 "1": {
                   "module_path": "tasks.candlestick_trend_validator.statistics.trend_validator",
                   "description": "Trend Validator (Анализ свечей)"
+                },
+                "2": {
+                  "module_path": "tasks.candlestick_trend_validator.statistics.change_trends",
+                  "description": "Change Trends (Анализ смены тренда)"
                 }
               }
             },
